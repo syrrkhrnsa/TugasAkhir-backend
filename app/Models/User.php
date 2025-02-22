@@ -41,4 +41,10 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
     ];
+
+    // Relasi dengan ActivityLog
+    public function activityLogs()
+    {
+        return $this->hasMany(ActivityLog::class);
+    }
 }
