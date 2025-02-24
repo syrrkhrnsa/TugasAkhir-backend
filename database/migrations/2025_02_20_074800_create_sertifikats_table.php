@@ -16,9 +16,9 @@ return new class extends Migration {
             $table->string('luasTanah');
             $table->string('fasilitas');
             $table->string('status');
-            $table->string('dokBastw'); // path dokumen PDF
-            $table->string('dokAiw'); // path dokumen PDF
-            $table->string('dokSw'); // path dokumen PDF
+            $table->string('dokBastw')->nullable(); // path dokumen PDF
+            $table->string('dokAiw')->nullable();// path dokumen PDF
+            $table->string('dokSw')->nullable(); // path dokumen PDF
             $table->timestamps();
             $table->foreign('id_tanah')->references('id_tanah')->on('tanahs')->onDelete('set null');
         });
