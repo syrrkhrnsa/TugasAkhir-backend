@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
@@ -59,10 +60,19 @@ class AuthController extends Controller
     }
 
     public function logout(Request $request) {
-        auth()->user()->tokens()->delete();
+        if (!$request->bearerToken()) {
+            return response()->json(['message' => 'Token not provided'], 401);
+        }
 
-        return [
-            'message' => 'Logged out'
-        ];
+        $user = auth()->user();
+
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        $user->tokens()->delete();
+
+        return response()->json(['message' => 'Logged out successfully'], 200);
     }
+    
 }
