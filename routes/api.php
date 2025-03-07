@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TanahController;
+use App\Http\Controllers\sertifikatWakafController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -35,10 +36,16 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::post('/tanah', [TanahController::class, 'store']);
     Route::put('/tanah/{id}', [TanahController::class, 'update']);
     Route::delete('/tanah/{id}', [TanahController::class, 'destroy']);
+
+      // API Sertifikat
+      Route::get('/sertifikat', [sertifikatWakafController::class, 'index']);
+      Route::get('/sertifikat/{id}', [sertifikatWakafController::class, 'show']);
+      Route::post('/sertifikat', [sertifikatWakafController::class, 'store']);
+      Route::put('/sertifikat/{id}', [sertifikatWakafController::class, 'update']);
+      Route::delete('/sertifikat/{id}', [sertifikatWakafController::class, 'destroy']);
 });
-
-
 
 Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();
 });
+
