@@ -37,7 +37,7 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::put('/tanah/{id}', [TanahController::class, 'update']);
     Route::delete('/tanah/{id}', [TanahController::class, 'destroy']);
 
-      // API Sertifikat
+      // API Sertifikat Wakaf
       Route::get('/sertifikat', [sertifikatWakafController::class, 'index']);
       Route::get('/sertifikat/{id}', [sertifikatWakafController::class, 'show']);
       Route::post('/sertifikat', [sertifikatWakafController::class, 'store']);
