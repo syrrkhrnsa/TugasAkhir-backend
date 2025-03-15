@@ -17,10 +17,18 @@ class User extends Authenticatable
      *
      * @var array
      */
+
+     public $incrementing = false;
+     protected $primaryKey = 'id';
+     protected $keyType = 'string';
+
     protected $fillable = [
+        'id',
         'name',
+        'username',
         'email',
         'password',
+        'role_id',
     ];
 
     /**
@@ -42,9 +50,22 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
     ];
 
+    public function role()
+    {
+        return $this->belongsTo(Role::class);
+    }
+
     // Relasi dengan ActivityLog
     public function activityLogs()
     {
         return $this->hasMany(ActivityLog::class);
+    }
+    public function tanah()
+    {
+        return $this->hasMany(Tanah::class);
+    }
+    public function sertifikat()
+    {
+        return $this->hasMany(Sertifikat::class);
     }
 }

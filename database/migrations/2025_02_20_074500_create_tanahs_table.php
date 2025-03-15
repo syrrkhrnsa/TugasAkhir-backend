@@ -9,13 +9,16 @@ return new class extends Migration {
     {
         Schema::create('tanahs', function (Blueprint $table) {
             $table->uuid('id_tanah')->primary();
-            $table->string('NamaTanah');
+            $table->string('NamaPimpinanJamaah');
             $table->string('NamaWakif');
             $table->string('lokasi');
             $table->string('luasTanah');
-            $table->uuid('id_sertifikat')->nullable();
+            $table->string('legalitas');
+            $table->string('status');
+            $table->uuid('user_id');
             $table->timestamps();
-            $table->geometry('koordinatTanah')->nullable();
+
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
         });
     }
 
