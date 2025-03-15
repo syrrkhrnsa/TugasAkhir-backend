@@ -17,12 +17,11 @@ class Sertifikat extends Model
 
     protected $fillable = [
         'id_sertifikat',
-        'noSertifikat',
-        'namaWakif',
-        'lokasi',
-        'luasTanah',
-        'fasilitas',
+        'id_tanah',
+        'noDokumen',
         'status',
+        'legalitas',
+        'user_id',
         'dokBastw',
         'dokAiw',
         'dokSw'
@@ -31,6 +30,17 @@ class Sertifikat extends Model
     // Relasi dengan Tanah
     public function tanah()
     {
-        return $this->hasOne(Tanah::class, 'id_sertifikat', 'id_sertifikat');
+        return $this->belongsTo(Tanah::class, 'id_tanah', 'id_tanah'); // Adjusted relation to match the foreign key
+    }
+
+    // Relasi dengan User
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id', 'id'); // Add relationship with User model
+    }
+
+    public function approvals()
+    {
+        return $this->hasMany(Approval::class, 'data_id', 'id_sertifikat');
     }
 }

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Tanah extends Model
 {
@@ -16,21 +17,31 @@ class Tanah extends Model
 
     protected $fillable = [
         'id_tanah',
-        'NamaTanah',
-        'koordinatTanah',
+        'NamaPimpinanJamaah',
         'NamaWakif',
         'lokasi',
         'luasTanah',
-        'id_sertifikat' // Menambahkan kolom id_sertifikat
+        'legalitas',
+        'status',
+        'id_sertifikat',
+        'user_id' // Menambahkan kolom user_id
     ];
-
-    // protected $casts = [
-    //     'koordinatTanah' => 'string', // Mengubah geometri menjadi string JSON
-    // ];
+    
 
     // Relasi dengan Sertifikat
     public function sertifikat()
     {
         return $this->belongsTo(Sertifikat::class, 'id_sertifikat', 'id_sertifikat');
+    }
+
+    // Relasi dengan User
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id', 'id');
+    }
+
+    public function approvals(): HasMany
+    {
+        return $this->hasMany(Approval::class, 'data_id', 'id_tanah');
     }
 }
