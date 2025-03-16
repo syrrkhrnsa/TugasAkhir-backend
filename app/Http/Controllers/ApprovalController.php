@@ -10,6 +10,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Str;
+use App\Models\User; // Import model User
+use App\Notifications\ApprovalNotification; // Import notifikasi ApprovalNotification
+use App\Notifications\RejectionNotification; // Import notifikasi RejectionNotification
 
 class ApprovalController extends Controller
 {
@@ -72,26 +75,26 @@ class ApprovalController extends Controller
     }
 
 
-        public function approve($id)
+    public function approve($id)
     {
         $user = Auth::user();
         if (!$user || $user->role_id !== '26b2b64e-9ae3-4e2e-9063-590b1bb00480') {
             return response()->json(["status" => "error", "message" => "Anda tidak memiliki izin"], 403);
         }
-
+    
         $approval = Approval::find($id);
         if (!$approval) {
             return response()->json(["status" => "error", "message" => "Permintaan tidak ditemukan"], 404);
         }
-
+    
         // Decode JSON dari 'data' yang ada dalam approval
         $data = json_decode($approval->data, true);
-
+    
         // Pastikan 'data' sudah terdecode dengan benar
         if (!$data) {
             return response()->json(["status" => "error", "message" => "Data tidak valid"], 400);
         }
-
+    
         // Cek tipe approval
         if ($approval->type === 'tanah') {
             // Jika tipe approval adalah tanah, simpan data ke tabel Tanah
@@ -102,10 +105,14 @@ class ApprovalController extends Controller
         } else {
             return response()->json(["status" => "error", "message" => "Tipe approval tidak valid"], 400);
         }
-
+    
         // Update status persetujuan
         $approval->update(['status' => 'disetujui', 'approver_id' => $user->id]);
-
+    
+        // Kirim notifikasi ke Pimpinan Jamaah
+        $pimpinanJamaah = User::find($approval->user_id);
+        $pimpinanJamaah->notify(new ApprovalNotification($approval));
+    
         return response()->json(["status" => "success", "message" => "Permintaan disetujui"], 200);
     }
 
@@ -178,88 +185,103 @@ class ApprovalController extends Controller
     // Update status persetujuan
     $approval->update(['status' => 'disetujui', 'approver_id' => $user->id]);
 
+    // Kirim notifikasi ke Pimpinan Jamaah
+    $pimpinanJamaah = User::find($approval->user_id);
+    $pimpinanJamaah->notify(new ApprovalNotification($approval));
+
     return response()->json(["status" => "success", "message" => "Permintaan pembaruan disetujui"], 200);
 }
 
-    public function rejectUpdate($id)
-    {
-        $user = Auth::user();
-        if (!$user || $user->role_id !== '26b2b64e-9ae3-4e2e-9063-590b1bb00480') {
-            return response()->json(["status" => "error", "message" => "Anda tidak memiliki izin"], 403);
-        }
-
-        $approval = Approval::find($id);
-        if (!$approval) {
-            return response()->json(["status" => "error", "message" => "Permintaan tidak ditemukan"], 404);
-        }
-
-        // Decode data JSON
-        $data = json_decode($approval->data, true);
-
-        if (!$data || !isset($data['previous_data'])) {
-            return response()->json(["status" => "error", "message" => "Data tidak valid"], 400);
-        }
-
-        // Cek tipe approval
-        if ($approval->type === 'tanah_update') {
-            // Jika tipe approval adalah tanah_update, kembalikan data tanah ke versi sebelumnya
-            $tanah = Tanah::where('id_tanah', $data['previous_data']['id_tanah'])->first();
-            if (!$tanah) {
-                return response()->json(["status" => "error", "message" => "Data tanah tidak ditemukan"], 404);
-            }
-            $tanah->update($data['previous_data']);
-        } elseif ($approval->type === 'sertifikat_update') {
-            // Jika tipe approval adalah sertifikat_update, kembalikan data sertifikat ke versi sebelumnya
-            $sertifikat = Sertifikat::where('id_sertifikat', $data['previous_data']['id_sertifikat'])->first();
-            if (!$sertifikat) {
-                return response()->json(["status" => "error", "message" => "Data sertifikat tidak ditemukan"], 404);
-            }
-            $sertifikat->update($data['previous_data']);
-        } else {
-            return response()->json(["status" => "error", "message" => "Tipe approval tidak valid"], 400);
-        }
-
-        // Update status persetujuan menjadi 'ditolak'
-        $approval->update(['status' => 'ditolak', 'approver_id' => $user->id]);
-
-        return response()->json(["status" => "success", "message" => "Permintaan pembaruan ditolak"], 200);
+public function rejectUpdate($id)
+{
+    $user = Auth::user();
+    if (!$user || $user->role_id !== '26b2b64e-9ae3-4e2e-9063-590b1bb00480') {
+        return response()->json(["status" => "error", "message" => "Anda tidak memiliki izin"], 403);
     }
+
+    $approval = Approval::find($id);
+    if (!$approval) {
+        return response()->json(["status" => "error", "message" => "Permintaan tidak ditemukan"], 404);
+    }
+
+    // Decode data JSON
+    $data = json_decode($approval->data, true);
+
+    if (!$data || !isset($data['previous_data'])) {
+        return response()->json(["status" => "error", "message" => "Data tidak valid"], 400);
+    }
+
+    // Cek tipe approval
+    if ($approval->type === 'tanah_update') {
+        // Jika tipe approval adalah tanah_update, kembalikan data tanah ke versi sebelumnya
+        $tanah = Tanah::where('id_tanah', $data['previous_data']['id_tanah'])->first();
+        if (!$tanah) {
+            return response()->json(["status" => "error", "message" => "Data tanah tidak ditemukan"], 404);
+        }
+        $tanah->update($data['previous_data']);
+    } elseif ($approval->type === 'sertifikat_update') {
+        // Jika tipe approval adalah sertifikat_update, kembalikan data sertifikat ke versi sebelumnya
+        $sertifikat = Sertifikat::where('id_sertifikat', $data['previous_data']['id_sertifikat'])->first();
+        if (!$sertifikat) {
+            return response()->json(["status" => "error", "message" => "Data sertifikat tidak ditemukan"], 404);
+        }
+        $sertifikat->update($data['previous_data']);
+    } else {
+        return response()->json(["status" => "error", "message" => "Tipe approval tidak valid"], 400);
+    }
+
+    // Update status persetujuan menjadi 'ditolak'
+    $approval->update(['status' => 'ditolak', 'approver_id' => $user->id]);
+
+    // Kirim notifikasi ke Pimpinan Jamaah
+    $pimpinanJamaah = User::find($approval->user_id);
+    $pimpinanJamaah->notify(new RejectionNotification($approval));
+
+    return response()->json(["status" => "success", "message" => "Permintaan pembaruan ditolak"], 200);
+}
 
 
     public function reject($id)
-    {
-        $user = Auth::user();
-        if (!$user || $user->role_id !== '26b2b64e-9ae3-4e2e-9063-590b1bb00480') {
-            return response()->json(["status" => "error", "message" => "Anda tidak memiliki izin"], 403);
-        }
-
-        $approval = Approval::find($id);
-        if (!$approval) {
-            return response()->json(["status" => "error", "message" => "Permintaan tidak ditemukan"], 404);
-        }
-
-        // Decode JSON dari 'data' yang ada dalam approval
-        $data = json_decode($approval->data, true);
-
-        // Pastikan 'data' sudah terdecode dengan benar
-        if (!$data) {
-            return response()->json(["status" => "error", "message" => "Data tidak valid"], 400);
-        }
-
-        // Cek tipe approval
-        if ($approval->type === 'tanah') {
-            // Jika tipe approval adalah tanah, simpan data ke tabel Tanah dengan status 'ditolak'
-            Tanah::create(array_merge($data, ['status' => 'ditolak', 'user_id' => $approval->user_id]));
-        } elseif ($approval->type === 'sertifikat') {
-            // Jika tipe approval adalah sertifikat, simpan data ke tabel Sertifikat dengan status 'ditolak'
-            Sertifikat::create(array_merge($data, ['status' => 'ditolak', 'user_id' => $approval->user_id]));
-        } else {
-            return response()->json(["status" => "error", "message" => "Tipe approval tidak valid"], 400);
-        }
-
-        // Update status persetujuan menjadi 'ditolak'
-        $approval->update(['status' => 'ditolak', 'approver_id' => $user->id]);
-
-        return response()->json(["status" => "success", "message" => "Permintaan ditolak dan data disimpan dengan status ditolak"], 200);
+{
+    $user = Auth::user();
+    if (!$user || $user->role_id !== '26b2b64e-9ae3-4e2e-9063-590b1bb00480') {
+        return response()->json(["status" => "error", "message" => "Anda tidak memiliki izin"], 403);
     }
+
+    $approval = Approval::find($id);
+    if (!$approval) {
+        return response()->json(["status" => "error", "message" => "Permintaan tidak ditemukan"], 404);
+    }
+
+    // Decode JSON dari 'data' yang ada dalam approval
+    $data = json_decode($approval->data, true);
+
+    // Pastikan 'data' sudah terdecode dengan benar
+    if (!$data) {
+        return response()->json(["status" => "error", "message" => "Data tidak valid"], 400);
+    }
+
+    // Cek tipe approval
+    if ($approval->type === 'tanah') {
+        // Jika tipe approval adalah tanah, simpan data ke tabel Tanah dengan status 'ditolak'
+        Tanah::create(array_merge($data, ['status' => 'ditolak', 'user_id' => $approval->user_id]));
+    } elseif ($approval->type === 'sertifikat') {
+        // Jika tipe approval adalah sertifikat, simpan data ke tabel Sertifikat dengan status 'ditolak'
+        Sertifikat::create(array_merge($data, ['status' => 'ditolak', 'user_id' => $approval->user_id]));
+    } else {
+        return response()->json(["status" => "error", "message" => "Tipe approval tidak valid"], 400);
+    }
+
+    // Update status persetujuan menjadi 'ditolak'
+    $approval->update(['status' => 'ditolak', 'approver_id' => $user->id]);
+
+    // Kirim notifikasi ke Pimpinan Jamaah
+    $pimpinanJamaah = User::find($approval->user_id);
+    $pimpinanJamaah->notify(new RejectionNotification($approval));
+
+    return response()->json(["status" => "success", "message" => "Permintaan ditolak dan data disimpan dengan status ditolak"], 200);
+}
+
+
+
 }

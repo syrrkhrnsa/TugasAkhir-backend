@@ -7,7 +7,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class ApprovalNotification extends Notification
+class RejectionNotification extends Notification
 {
     use Queueable;
 
@@ -20,19 +20,16 @@ class ApprovalNotification extends Notification
 
     public function via($notifiable)
     {
-        return ['database']; // Notifikasi disimpan di database
+        return ['database'];
     }
 
     public function toArray($notifiable)
     {
-        $data = json_decode($this->approval->data, true);
-
         return [
-            'message' => 'Permintaan pembaruan data tanah telah dikirim.',
+            'message' => 'Permintaan persetujuan ditolak.',
+            'data' => $this->approval->data,
             'type' => $this->approval->type,
             'status' => $this->approval->status,
-            'previous_data' => $data['previous_data'] ?? null, // Data sebelum diubah
-            'updated_data' => $data['updated_data'] ?? null,   // Data setelah diubah
         ];
     }
 }
