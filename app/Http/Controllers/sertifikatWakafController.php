@@ -88,90 +88,91 @@ class SertifikatWakafController extends Controller
 
     // Menyimpan data sertifikat baru
     public function store(Request $request)
-    {
-        try {
-            $validator = Validator::make($request->all(), [
-                'noDokumen' => 'required|string|unique:sertifikats',
-                'dokBastw' => 'nullable|string',
-                'dokAiw' => 'nullable|string',
-                'dokSw' => 'nullable|string',
-            ]);
+{
+    try {
+        $validator = Validator::make($request->all(), [
+            'noDokumen' => 'required|string|unique:sertifikats',
+            'dokBastw' => 'nullable|string',
+            'dokAiw' => 'nullable|string',
+            'dokSw' => 'nullable|string',
+        ]);
 
-            if ($validator->fails()) {
-                return response()->json([
-                    "status" => "error",
-                    "message" => "Validasi gagal",
-                    "errors" => $validator->errors()
-                ], Response::HTTP_BAD_REQUEST);
-            }
-
-            $user = Auth::user();
-            if (!$user) {
-                return response()->json(["status" => "error", "message" => "User tidak terautentikasi"], Response::HTTP_UNAUTHORIZED);
-            }
-
-            // ID role
-            $rolePimpinanJamaah = '326f0dde-2851-4e47-ac5a-de6923447317';
-            $rolePimpinanCabang = '3594bece-a684-4287-b0a2-7429199772a3';
-            $roleBidgarWakaf = '26b2b64e-9ae3-4e2e-9063-590b1bb00480';
-
-            if ($user->role_id === $rolePimpinanJamaah) {
-                // Jika Pimpinan Jamaah, data disimpan ke tabel Approval
-                $data = [
-                    'id_sertifikat' => Str::uuid(),
-                    'id_tanah' => $request->id_tanah,
-                    'noDokumen' => $request->noDokumen,
-                    'legalitas' => 'N/A',
-                    'dokBastw' => $request->dokBastw,
-                    'dokAiw' => $request->dokAiw,
-                    'dokSw' => $request->dokSw,
-                ];
-
-                Approval::create([
-                    'user_id' => $user->id,
-                    'type' => 'sertifikat',
-                    'data_id' => Str::uuid(),
-                    'data' => json_encode($data),
-                    'status' => 'ditinjau',
-                ]);
-
-                return response()->json([
-                    "status" => "success",
-                    "message" => "Permintaan telah dikirim ke Bidgar Wakaf untuk ditinjau.",
-                ], Response::HTTP_CREATED);
-
-                $bidgarWakaf = User::where('role_id', '26b2b64e-9ae3-4e2e-9063-590b1bb00480')->get();
-                foreach ($bidgarWakaf as $bidgar) {
-                    $bidgar->notify(new ApprovalNotification($approval));
-                }
-            } else {
-                // Jika Pimpinan Cabang atau Bidgar Wakaf, langsung simpan ke tabel Sertifikat
-                $sertifikat = Sertifikat::create([
-                    'id_sertifikat' => Str::uuid(),
-                    'id_tanah' => $request->id_tanah,
-                    'noDokumen' => $request->noDokumen,
-                    'status' => 'disetujui',
-                    'legalitas' => 'N/A',
-                    'user_id' => $user->id,
-                    'dokBastw' => $request->dokBastw,
-                    'dokAiw' => $request->dokAiw,
-                    'dokSw' => $request->dokSw,
-                ]);
-
-                return response()->json([
-                    "status" => "success",
-                    "message" => "Data sertifikat berhasil ditambahkan dan disetujui.",
-                    "data" => $sertifikat
-                ], Response::HTTP_CREATED);
-            }
-        } catch (\Exception $e) {
+        if ($validator->fails()) {
             return response()->json([
                 "status" => "error",
-                "message" => "Terjadi kesalahan saat menyimpan data",
-                "error" => $e->getMessage()
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+                "message" => "Validasi gagal",
+                "errors" => $validator->errors()
+            ], Response::HTTP_BAD_REQUEST);
         }
+
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(["status" => "error", "message" => "User tidak terautentikasi"], Response::HTTP_UNAUTHORIZED);
+        }
+
+        // ID role
+        $rolePimpinanJamaah = '326f0dde-2851-4e47-ac5a-de6923447317';
+        $rolePimpinanCabang = '3594bece-a684-4287-b0a2-7429199772a3';
+        $roleBidgarWakaf = '26b2b64e-9ae3-4e2e-9063-590b1bb00480';
+
+        if ($user->role_id === $rolePimpinanJamaah) {
+            // Jika Pimpinan Jamaah, data disimpan ke tabel Approval
+            $data = [
+                'id_sertifikat' => Str::uuid(),
+                'id_tanah' => $request->id_tanah,
+                'noDokumen' => $request->noDokumen,
+                'legalitas' => 'N/A',
+                'dokBastw' => $request->dokBastw,
+                'dokAiw' => $request->dokAiw,
+                'dokSw' => $request->dokSw,
+            ];
+
+            $approval = Approval::create([
+                'user_id' => $user->id,
+                'type' => 'sertifikat',
+                'data_id' => Str::uuid(),
+                'data' => json_encode($data),
+                'status' => 'ditinjau',
+            ]);
+
+            // Kirim notifikasi ke Bidgar Wakaf
+            $bidgarWakaf = User::where('role_id', $roleBidgarWakaf)->get();
+            foreach ($bidgarWakaf as $bidgar) {
+                $bidgar->notify(new ApprovalNotification($approval));
+            }
+
+            return response()->json([
+                "status" => "success",
+                "message" => "Permintaan telah dikirim ke Bidgar Wakaf untuk ditinjau.",
+            ], Response::HTTP_CREATED);
+        } else {
+            // Jika Pimpinan Cabang atau Bidgar Wakaf, langsung simpan ke tabel Sertifikat
+            $sertifikat = Sertifikat::create([
+                'id_sertifikat' => Str::uuid(),
+                'id_tanah' => $request->id_tanah,
+                'noDokumen' => $request->noDokumen,
+                'status' => 'disetujui',
+                'legalitas' => 'N/A',
+                'user_id' => $user->id,
+                'dokBastw' => $request->dokBastw,
+                'dokAiw' => $request->dokAiw,
+                'dokSw' => $request->dokSw,
+            ]);
+
+            return response()->json([
+                "status" => "success",
+                "message" => "Data sertifikat berhasil ditambahkan dan disetujui.",
+                "data" => $sertifikat
+            ], Response::HTTP_CREATED);
+        }
+    } catch (\Exception $e) {
+        return response()->json([
+            "status" => "error",
+            "message" => "Terjadi kesalahan saat menyimpan data",
+            "error" => $e->getMessage()
+        ], Response::HTTP_INTERNAL_SERVER_ERROR);
     }
+}
 
     // Memperbarui data sertifikat
     public function update(Request $request, $id)
@@ -236,10 +237,10 @@ class SertifikatWakafController extends Controller
             ]);
 
             // Kirim notifikasi ke Bidgar Wakaf
-            // $bidgarWakaf = User::where('role_id', '26b2b64e-9ae3-4e2e-9063-590b1bb00480')->get();
-            // foreach ($bidgarWakaf as $bidgar) {
-            //     $bidgar->notify(new ApprovalNotification($approval));
-            // }
+            $bidgarWakaf = User::where('role_id', $roleBidgarWakaf)->get();
+            foreach ($bidgarWakaf as $bidgar) {
+                $bidgar->notify(new ApprovalNotification($approval));
+            }
 
             return response()->json([
                 "status" => "success",

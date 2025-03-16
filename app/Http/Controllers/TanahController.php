@@ -138,7 +138,7 @@ class TanahController extends Controller
                 'legalitas' => 'N/A',
             ];
 
-            Approval::create([
+            $approval = Approval::create([
                 'user_id' => $user->id,
                 'type' => 'tanah',
                 'data_id' => Str::uuid(),
@@ -146,15 +146,16 @@ class TanahController extends Controller
                 'status' => 'ditinjau',
             ]);
 
+            // Kirim notifikasi ke Bidgar Wakaf
+            $bidgarWakaf = User::where('role_id', $roleBidgarWakaf)->get();
+            foreach ($bidgarWakaf as $bidgar) {
+                $bidgar->notify(new ApprovalNotification($approval));
+            }
+
             return response()->json([
                 "status" => "success",
                 "message" => "Permintaan telah dikirim ke Bidgar Wakaf untuk ditinjau.",
             ], Response::HTTP_CREATED);
-
-            $bidgarWakaf = User::where('role_id', '26b2b64e-9ae3-4e2e-9063-590b1bb00480')->get();
-            foreach ($bidgarWakaf as $bidgar) {
-            $bidgar->notify(new ApprovalNotification($approval));
-            }
         } else {
             // Jika Pimpinan Cabang atau Bidgar Wakaf, langsung simpan ke tabel Tanah
             $tanah = Tanah::create([
@@ -212,7 +213,7 @@ class TanahController extends Controller
             return response()->json(["status" => "error", "message" => "Data tidak ditemukan"], Response::HTTP_NOT_FOUND);
         }
 
-        // Store the previous data
+        // Simpan data sebelumnya
         $previousData = $tanah->toArray();
 
         // ID role
@@ -221,7 +222,7 @@ class TanahController extends Controller
         $roleBidgarWakaf = '26b2b64e-9ae3-4e2e-9063-590b1bb00480';
 
         if ($user->role_id === $rolePimpinanJamaah) {
-            // If Pimpinan Jamaah, update saved as Approval
+            // Jika Pimpinan Jamaah, update disimpan sebagai Approval
             $data = [
                 'id_tanah' => $tanah->id_tanah,
                 'legalitas' => $request->legalitas ?? $tanah->legalitas,
@@ -231,8 +232,8 @@ class TanahController extends Controller
                 'luasTanah' => $request->luasTanah ?? $tanah->luasTanah,
             ];
 
-            // Create an approval with both previous and updated data
-            Approval::create([
+            // Buat approval dengan data sebelumnya dan data yang diperbarui
+            $approval = Approval::create([
                 'user_id' => $user->id,
                 'type' => 'tanah_update',
                 'data_id' => $tanah->id_tanah,
@@ -243,17 +244,18 @@ class TanahController extends Controller
                 'status' => 'ditinjau',
             ]);
 
+            // Kirim notifikasi ke Bidgar Wakaf
+            $bidgarWakaf = User::where('role_id', $roleBidgarWakaf)->get();
+            foreach ($bidgarWakaf as $bidgar) {
+                $bidgar->notify(new ApprovalNotification($approval));
+            }
+
             return response()->json([
                 "status" => "success",
                 "message" => "Permintaan pembaruan telah dikirim ke Bidgar Wakaf untuk ditinjau.",
             ], Response::HTTP_CREATED);
-
-            // $bidgarWakaf = User::where('role_id', '26b2b64e-9ae3-4e2e-9063-590b1bb00480')->get();
-            // foreach ($bidgarWakaf as $bidgar) {
-            //     $bidgar->notify(new ApprovalNotification($approval));
-            // }
         } else {
-            // If Pimpinan Cabang or Bidgar Wakaf, update data directly
+            // Jika Pimpinan Cabang atau Bidgar Wakaf, langsung update data
             $tanah->update($request->all());
 
             return response()->json([
