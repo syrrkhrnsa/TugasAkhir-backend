@@ -149,7 +149,7 @@ class TanahController extends Controller
             // Kirim notifikasi ke Bidgar Wakaf
             $bidgarWakaf = User::where('role_id', $roleBidgarWakaf)->get();
             foreach ($bidgarWakaf as $bidgar) {
-                $bidgar->notify(new ApprovalNotification($approval));
+                $bidgar->notify(new ApprovalNotification($approval, 'create', 'bidgar')); // Tambahkan 'bidgar' sebagai recipient
             }
 
             return response()->json([
@@ -247,7 +247,7 @@ class TanahController extends Controller
             // Kirim notifikasi ke Bidgar Wakaf
             $bidgarWakaf = User::where('role_id', $roleBidgarWakaf)->get();
             foreach ($bidgarWakaf as $bidgar) {
-                $bidgar->notify(new ApprovalNotification($approval));
+                $bidgar->notify(new ApprovalNotification($approval, 'update', 'bidgar')); // Tambahkan 'bidgar' sebagai recipient
             }
 
             return response()->json([
