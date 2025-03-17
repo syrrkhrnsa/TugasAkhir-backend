@@ -3,28 +3,36 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Role;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Response;
 
 class AuthController extends Controller
 {
-    public function register(Request $request) {
+    public function register(Request $request)
+    {
+        // Validate incoming request
         $fields = $request->validate([
             'name' => 'required|string',
             'email' => 'required|string|unique:users,email',
-            'password' => 'required|string|confirmed'
+            'password' => 'required|string|confirmed',
+            'role_id' => 'required|exists:roles,id' // Ensure the role exists
         ]);
 
+        // Create the user with role_id
         $user = User::create([
             'name' => $fields['name'],
             'email' => $fields['email'],
-            'password' => bcrypt($fields['password'])
+            'password' => bcrypt($fields['password']),
+            'role_id' => $fields['role_id'] // Add role to user
         ]);
 
+        // Generate API token
         $token = $user->createToken('myapptoken')->plainTextToken;
 
+        // Prepare the response
         $response = [
             'user' => $user,
             'token' => $token
@@ -33,33 +41,46 @@ class AuthController extends Controller
         return response($response, 201);
     }
 
-    public function login(Request $request) {
-        $fields = $request->validate([
-            'email' => 'required|string',
-            'password' => 'required|string'
-        ]);
+    public function login(Request $request)
+{
+    // Validasi incoming request
+    $fields = $request->validate([
+        'email' => 'required|string',
+        'password' => 'required|string'
+    ]);
 
-        // Check email
-        $user = User::where('email', $fields['email'])->first();
+    // Cek jika user ada berdasarkan email
+    $user = User::where('email', $fields['email'])->first();
 
-        // Check password
-        if(!$user || !Hash::check($fields['password'], $user->password)) {
-            return response([
-                'message' => 'Bad creds'
-            ], 401);
-        }
-
-        $token = $user->createToken('myapptoken')->plainTextToken;
-
-        $response = [
-            'user' => $user,
-            'token' => $token
-        ];
-
-        return response($response, 200);
+    // Periksa password
+    if (!$user || !Hash::check($fields['password'], $user->password)) {
+        return response([
+            'message' => 'Bad credentials'
+        ], 401);
     }
 
-    public function logout(Request $request) {
+    // Memuat relasi 'role' saat login
+    $user->load('role');
+
+    // Generate token API
+    $token = $user->createToken('myapptoken')->plainTextToken;
+
+    // Menyiapkan response
+    $response = [
+        'user' => [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'role' => $user->role, // Menyertakan role dalam response
+        ],
+        'token' => $token
+    ];
+
+    return response($response, 200);
+}
+
+    public function logout(Request $request)
+    {
         if (!$request->bearerToken()) {
             return response()->json(['message' => 'Token not provided'], 401);
         }
@@ -70,9 +91,9 @@ class AuthController extends Controller
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
+        // Revoke all tokens for the user
         $user->tokens()->delete();
 
         return response()->json(['message' => 'Logged out successfully'], 200);
     }
-    
 }
