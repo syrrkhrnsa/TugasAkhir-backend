@@ -109,10 +109,9 @@ class ApprovalController extends Controller
         // Update status persetujuan
         $approval->update(['status' => 'disetujui', 'approver_id' => $user->id]);
     
-        // Kirim notifikasi ke Pimpinan Jamaah
         $pimpinanJamaah = User::find($approval->user_id);
-        $pimpinanJamaah->notify(new ApprovalNotification($approval));
-    
+        $pimpinanJamaah->notify(new ApprovalNotification($approval, 'approve', 'pimpinan_jamaah')); // Tambahkan 'pimpinan_jamaah' sebagai recipient
+
         return response()->json(["status" => "success", "message" => "Permintaan disetujui"], 200);
     }
 
@@ -187,7 +186,7 @@ class ApprovalController extends Controller
 
     // Kirim notifikasi ke Pimpinan Jamaah
     $pimpinanJamaah = User::find($approval->user_id);
-    $pimpinanJamaah->notify(new ApprovalNotification($approval));
+    $pimpinanJamaah->notify(new ApprovalNotification($approval, 'approve_update', 'pimpinan_jamaah'));
 
     return response()->json(["status" => "success", "message" => "Permintaan pembaruan disetujui"], 200);
 }
@@ -235,7 +234,7 @@ public function rejectUpdate($id)
 
     // Kirim notifikasi ke Pimpinan Jamaah
     $pimpinanJamaah = User::find($approval->user_id);
-    $pimpinanJamaah->notify(new RejectionNotification($approval));
+    $pimpinanJamaah->notify(new RejectionNotification($approval, 'reject_update', 'pimpinan_jamaah'));
 
     return response()->json(["status" => "success", "message" => "Permintaan pembaruan ditolak"], 200);
 }
@@ -277,7 +276,7 @@ public function rejectUpdate($id)
 
     // Kirim notifikasi ke Pimpinan Jamaah
     $pimpinanJamaah = User::find($approval->user_id);
-    $pimpinanJamaah->notify(new RejectionNotification($approval));
+    $pimpinanJamaah->notify(new RejectionNotification($approval, 'reject', 'pimpinan_jamaah'));
 
     return response()->json(["status" => "success", "message" => "Permintaan ditolak dan data disimpan dengan status ditolak"], 200);
 }
