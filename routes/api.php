@@ -7,6 +7,7 @@ use App\Http\Controllers\sertifikatWakafController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\UserController;
 
 /*
 |--------------------------------------------------------------------------
@@ -29,9 +30,11 @@ Route::get('/sertifikat/public', [sertifikatWakafController::class, 'publicIndex
 
 
 
+
 // Protected routes
 Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/data/user', [UserController::class, 'index']);
 
     //API TANAH
     Route::get('/tanah', [TanahController::class, 'index']);
