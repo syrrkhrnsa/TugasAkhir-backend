@@ -64,12 +64,12 @@ class SertifikatWakafController extends Controller
         $sertifikat = Sertifikat::findOrFail($id);
 
         $validator = Validator::make($request->all(), [
-            'noSertifikat' => 'required|unique:sertifikats,noSertifikat,' . $id . ',id_sertifikat',
-            'namaWakif' => 'required',
-            'lokasi' => 'required',
-            'luasTanah' => 'required',
-            'fasilitas' => 'required',
-            'status' => 'required',
+            'noSertifikat' => 'nullable|unique:sertifikats,noSertifikat,' . $id . ',id_sertifikat',
+            'namaWakif' => 'nullable',
+            'lokasi' => 'nullable',
+            'luasTanah' => 'nullable',
+            'fasilitas' => 'nullable',
+            'status' => 'nullable',
             'dokBastw' => 'nullable|file|mimes:pdf,jpg,png',
             'dokAiw' => 'nullable|file|mimes:pdf,jpg,png',
             'dokSw' => 'nullable|file|mimes:pdf,jpg,png',
