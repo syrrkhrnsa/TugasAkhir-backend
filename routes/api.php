@@ -59,6 +59,7 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
 
     Route::get('/notifications', [NotificationController::class, 'index']); // Menampilkan notifikasi
     Route::post('/notifications/mark-as-read/{id}', [NotificationController::class, 'markAsRead']); // Menandai notifikasi sebagai sudah dibaca
+    Route::post('/notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead']);
 });
 
 Route::middleware('auth:api')->get('/user', function (Request $request) {
