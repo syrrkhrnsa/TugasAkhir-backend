@@ -9,7 +9,7 @@ return new class extends Migration {
     {
         Schema::create('sertifikats', function (Blueprint $table) {
             $table->uuid('id_sertifikat')->primary();
-            $table->string('noDokumen')->unique();
+            $table->string('noDokumen')->nullable()->unique();
             $table->string('status');
             $table->string('legalitas');
             $table->uuid('user_id');
