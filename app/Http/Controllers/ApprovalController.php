@@ -281,6 +281,38 @@ public function rejectUpdate($id)
     return response()->json(["status" => "success", "message" => "Permintaan ditolak dan data disimpan dengan status ditolak"], 200);
 }
 
+public function getByType($type)
+{
+    $user = Auth::user();
 
+    if (!$user) {
+        return response()->json(["status" => "error", "message" => "User tidak terautentikasi"], 401);
+    }
+
+    // Validasi tipe yang diperbolehkan
+    $allowedTypes = ['tanah', 'tanah_update', 'fasilitas', 'fasilitas_update', 'inventaris', 'inventaris_update'];
+    if (!in_array($type, $allowedTypes)) {
+        return response()->json(["status" => "error", "message" => "Tipe tidak valid"], 400);
+    }
+
+    // Ambil data persetujuan berdasarkan tipe
+    $approvals = Approval::where('type', $type)
+        ->where('status', 'ditinjau')
+        ->get()
+        ->map(function ($approval) {
+            $parsedData = json_decode($approval->data, true);
+            
+            return array_merge($parsedData, [
+                'status' => $approval->status
+            ]);
+
+        });
+
+    return response()->json([
+        "status" => "success",
+        "message" => "Data permintaan persetujuan berhasil diambil",
+        "data" => $approvals
+    ], 200);
+}
 
 }

@@ -57,15 +57,10 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::post('/approvals/{id}/update/approve', [ApprovalController::class, 'approveUpdate']);
     Route::post('/approvals/{id}/reject', [ApprovalController::class, 'reject']);
     Route::post('/approvals/{id}/update/reject', [ApprovalController::class, 'rejectUpdate']);
+    Route::get('/approvals/type/{type}', [ApprovalController::class, 'getByType']);
 
     Route::get('/notifications', [NotificationController::class, 'index']); // Menampilkan notifikasi
     Route::post('/notifications/mark-as-read/{id}', [NotificationController::class, 'markAsRead']); // Menandai notifikasi sebagai sudah dibaca
-    // API Sertifikat Wakaf
-    Route::get('/sertifikat', [sertifikatWakafController::class, 'index']);
-    Route::get('/sertifikat/{id}', [sertifikatWakafController::class, 'show']);
-    Route::post('/sertifikat', [sertifikatWakafController::class, 'store']);
-    Route::put('/sertifikat/{id}', [sertifikatWakafController::class, 'update']);
-    Route::delete('/sertifikat/{id}', [sertifikatWakafController::class, 'destroy']);
 
     // API ActivityLog
     Route::get('/log-tanah', [ActivityLogController::class, 'logTanah']);
