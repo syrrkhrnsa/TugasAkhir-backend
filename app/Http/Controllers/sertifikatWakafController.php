@@ -40,17 +40,17 @@ class SertifikatWakafController extends Controller
         }
     }
 
-    public function showLegalitas($id)
+    public function showLegalitas($id_tanah)
     {
         try {
-            // Cari sertifikat berdasarkan ID
-            $sertifikat = Sertifikat::find($id);
+            // Cari sertifikat berdasarkan id_tanah
+            $sertifikat = Sertifikat::where('id_tanah', $id_tanah)->first();
 
             // Jika data tidak ditemukan
             if (!$sertifikat) {
                 return response()->json([
                     "status" => "error",
-                    "message" => "Data sertifikat tidak ditemukan"
+                    "message" => "Data sertifikat untuk tanah ini tidak ditemukan"
                 ], Response::HTTP_NOT_FOUND);
             }
 
@@ -61,6 +61,7 @@ class SertifikatWakafController extends Controller
                 "status" => "success",
                 "message" => "Data legalitas berhasil diambil",
                 "data" => [
+                    "id_tanah" => $sertifikat->id_tanah,
                     "id_sertifikat" => $sertifikat->id_sertifikat,
                     "legalitas" => $legalitas
                 ]
