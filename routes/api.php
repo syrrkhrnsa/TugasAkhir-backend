@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TanahController;
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\sertifikatWakafController;
+use App\Http\Controllers\ActivityLogController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\NotificationController;
@@ -59,9 +60,16 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::post('/approvals/{id}/update/approve', [ApprovalController::class, 'approveUpdate']);
     Route::post('/approvals/{id}/reject', [ApprovalController::class, 'reject']);
     Route::post('/approvals/{id}/update/reject', [ApprovalController::class, 'rejectUpdate']);
+    Route::get('/approvals/type/{type}', [ApprovalController::class, 'getByType']);
 
     Route::get('/notifications', [NotificationController::class, 'index']); // Menampilkan notifikasi
     Route::post('/notifications/mark-as-read/{id}', [NotificationController::class, 'markAsRead']); // Menandai notifikasi sebagai sudah dibaca
+
+    // API ActivityLog
+    Route::get('/log-tanah', [ActivityLogController::class, 'logTanah']);
+    Route::get('/log-sertifikat', [ActivityLogController::class, 'logSertifikat']);
+    Route::get('/log-status', [ActivityLogController::class, 'logStatus']);
+    Route::get('/log-user/{userId}', [ActivityLogController::class, 'logByUser']);    
     Route::post('/notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead']);
 });
 
