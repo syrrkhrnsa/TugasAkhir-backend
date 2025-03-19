@@ -18,7 +18,9 @@ class Sertifikat extends Model
     protected $fillable = [
         'id_sertifikat',
         'id_tanah',
-        'noDokumen',
+        'noDokumenBastw',
+        'noDokumenAIW',
+        'noDokumenSW',
         'status',
         'legalitas',
         'user_id',
