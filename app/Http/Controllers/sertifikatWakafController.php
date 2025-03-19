@@ -40,6 +40,40 @@ class SertifikatWakafController extends Controller
         }
     }
 
+    public function showLegalitas($id)
+    {
+        try {
+            // Cari sertifikat berdasarkan ID
+            $sertifikat = Sertifikat::find($id);
+
+            // Jika data tidak ditemukan
+            if (!$sertifikat) {
+                return response()->json([
+                    "status" => "error",
+                    "message" => "Data sertifikat tidak ditemukan"
+                ], Response::HTTP_NOT_FOUND);
+            }
+
+            // Ambil data legalitas
+            $legalitas = $sertifikat->legalitas;
+
+            return response()->json([
+                "status" => "success",
+                "message" => "Data legalitas berhasil diambil",
+                "data" => [
+                    "id_sertifikat" => $sertifikat->id_sertifikat,
+                    "legalitas" => $legalitas
+                ]
+            ], Response::HTTP_OK);
+        } catch (\Exception $e) {
+            return response()->json([
+                "status" => "error",
+                "message" => "Terjadi kesalahan saat mengambil data legalitas",
+                "error" => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
     // Menampilkan data sertifikat berdasarkan role pengguna
     public function index()
     {
@@ -91,7 +125,7 @@ class SertifikatWakafController extends Controller
 {
     try {
         $validator = Validator::make($request->all(), [
-            'noDokumen' => 'required|string|unique:sertifikats',
+            'noDokumen' => 'nullable|string|unique:sertifikats',
             'dokBastw' => 'nullable|string',
             'dokAiw' => 'nullable|string',
             'dokSw' => 'nullable|string',
@@ -183,7 +217,6 @@ class SertifikatWakafController extends Controller
             'dokBastw' => 'nullable|string',
             'dokAiw' => 'nullable|string',
             'dokSw' => 'nullable|string',
-            'legalitas' => 'sometimes|string',
         ]);
 
         if ($validator->fails()) {
@@ -217,7 +250,6 @@ class SertifikatWakafController extends Controller
             $data = [
                 'id_sertifikat' => $sertifikat->id_sertifikat, // Sertakan id_sertifikat
                 'noDokumen' => $request->noDokumen ?? $sertifikat->noDokumen,
-                'legalitas' => $request->legalitas ?? $sertifikat->legalitas,
                 'dokBastw' => $request->dokBastw ?? $sertifikat->dokBastw,
                 'dokAiw' => $request->dokAiw ?? $sertifikat->dokAiw,
                 'dokSw' => $request->dokSw ?? $sertifikat->dokSw,
@@ -264,6 +296,50 @@ class SertifikatWakafController extends Controller
         ], Response::HTTP_INTERNAL_SERVER_ERROR);
     }
 }
+
+    public function updateLegalitas(Request $request, $id)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'legalitas' => 'required|string', // Hanya validasi untuk legalitas
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    "status" => "error",
+                    "message" => "Validasi gagal",
+                    "errors" => $validator->errors()
+                ], Response::HTTP_BAD_REQUEST);
+            }
+
+            $user = Auth::user();
+            if (!$user) {
+                return response()->json(["status" => "error", "message" => "User tidak terautentikasi"], Response::HTTP_UNAUTHORIZED);
+            }
+
+            $sertifikat = Sertifikat::find($id);
+            if (!$sertifikat) {
+                return response()->json(["status" => "error", "message" => "Data tidak ditemukan"], Response::HTTP_NOT_FOUND);
+            }
+
+            // Update hanya field legalitas
+            $sertifikat->legalitas = $request->legalitas;
+            $sertifikat->save();
+
+            return response()->json([
+                "status" => "success",
+                "message" => "Data legalitas berhasil diperbarui.",
+                "data" => $sertifikat
+            ], Response::HTTP_OK);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                "status" => "error",
+                "message" => "Terjadi kesalahan saat memperbarui data legalitas",
+                "error" => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
 
     // Menghapus data sertifikat
     public function destroy($id)
