@@ -11,57 +11,64 @@ class ApprovalNotification extends Notification
 {
     use Queueable;
 
-    protected $approval; // Properti untuk menyimpan data approval
-    protected $action;   // Properti untuk menyimpan jenis aksi (create/update)
-    protected $recipient; // Properti untuk menyimpan penerima notifikasi (bidgar/pimpinan_jamaah)
+    protected $approval;
+    protected $action;
+    protected $recipient;
 
     public function __construct($approval, $action, $recipient)
     {
-        $this->approval = $approval; // Inisialisasi properti approval
-        $this->action = $action;     // Inisialisasi properti action
-        $this->recipient = $recipient; // Inisialisasi properti recipient
+        $this->approval = $approval;
+        $this->action = $action;
+        $this->recipient = $recipient;
     }
 
     public function via($notifiable)
     {
-        return ['database']; // Notifikasi disimpan di database
+        return ['database'];
     }
 
     public function toArray($notifiable)
     {
         $data = json_decode($this->approval->data, true);
-        $namaPimpinanJamaah = $data['NamaPimpinanJamaah'] ?? 'Unknown';
-        $currentTime = now()->format('H:i:s');
+        $previousData = $data['previous_data'] ?? [];
 
-        // Pesan untuk Bidgar Wakaf
+        // Ambil NamaPimpinanJamaah, jika kosong pakai previous_data
+        $namaPimpinanJamaah = $data['NamaPimpinanJamaah'] ?? $previousData['NamaPimpinanJamaah'] ?? 'Unknown';
+
+        // Jika penerima adalah Bidgar Wakaf
         if ($this->recipient === 'bidgar') {
             if ($this->action === 'create') {
-                $message = "Penambahan data {$this->approval->type} oleh {$namaPimpinanJamaah} jam {$currentTime}.";
-                $details = $data; // Data yang dicreate
+                $message = "Penambahan data {$this->approval->type} oleh {$namaPimpinanJamaah}.";
+                $details = $data;
             } else {
-                $message = "Pembaruan data {$this->approval->type} oleh {$namaPimpinanJamaah} jam {$currentTime}.";
+                $type = str_replace("_update", "", $this->approval->type);
+                $message = "Pembaharuan data {$type} oleh {$namaPimpinanJamaah}.";
                 $details = [
-                    'previous_data' => $data['previous_data'] ?? null,
-                    'updated_data' => $data['updated_data'] ?? null,
+                    'previous_data' => $previousData,
+                    'updated_data' => $data['updated_data'] ?? [],
                 ];
             }
         }
-        // Pesan untuk Pimpinan Jamaah
+        // Jika penerima adalah Pimpinan Jamaah
         elseif ($this->recipient === 'pimpinan_jamaah') {
             if ($this->action === 'create') {
-                $message = "Bidgar Wakaf telah menyetujui pembuatan data {$this->approval->type} jam {$currentTime}.";
+                $message = "Bidgar Wakaf telah menyetujui pembuatan data {$this->approval->type}.";
             } else {
-                $message = "Bidgar Wakaf telah menyetujui pembaruan data {$this->approval->type} jam {$currentTime}.";
+                $type = str_replace("_update", "", $this->approval->type);
+                $message = "Bidgar Wakaf telah menyetujui pembaharuan data {$type}.";
             }
-            $details = $data; // Sertakan data yang relevan
+            $details = $data;
         }
 
         return [
             'message' => $message,
             'type' => $this->approval->type,
             'status' => $this->approval->status,
-            'details' => $details, // Sertakan data yang relevan
-            'id_approval' => $this->approval->id,
+            'details' => $details,
+	        'id_approval' => $this->approval->id,
         ];
     }
 }
+
+
+
