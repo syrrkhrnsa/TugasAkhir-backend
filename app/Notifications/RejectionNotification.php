@@ -31,26 +31,25 @@ class RejectionNotification extends Notification
     {
         $data = json_decode($this->approval->data, true);
         $namaPimpinanJamaah = $data['NamaPimpinanJamaah'] ?? 'Unknown';
-        $currentTime = now()->format('H:i:s');
 
         // Pesan untuk Bidgar Wakaf
         if ($this->recipient === 'bidgar') {
             if ($this->action === 'reject') {
-                $message = "Permintaan persetujuan data {$this->approval->type} oleh {$namaPimpinanJamaah} jam {$currentTime} telah ditolak.";
+                $message = "Permintaan persetujuan data {$this->approval->type} oleh {$namaPimpinanJamaah}.";
             } elseif ($this->action === 'reject_update') {
-                $message = "Permintaan pembaruan data {$this->approval->type} oleh {$namaPimpinanJamaah} jam {$currentTime} telah ditolak.";
+                $message = "Permintaan pembaharuan data {$this->approval->type} oleh {$namaPimpinanJamaah}.";
             } else {
-                $message = "Permintaan data {$this->approval->type} oleh {$namaPimpinanJamaah} jam {$currentTime} telah diproses.";
+                $message = "Permintaan data {$this->approval->type} oleh {$namaPimpinanJamaah} telah diproses.";
             }
         }
         // Pesan untuk Pimpinan Jamaah
         elseif ($this->recipient === 'pimpinan_jamaah') {
             if ($this->action === 'reject') {
-                $message = "Bidgar Wakaf telah menolak pembuatan data {$this->approval->type} jam {$currentTime}.";
+                $message = "Bidgar Wakaf telah menolak pembuatan data {$this->approval->type}.";
             } elseif ($this->action === 'reject_update') {
-                $message = "Bidgar Wakaf telah menolak pembaruan data {$this->approval->type} jam {$currentTime}.";
+                $message = "Bidgar Wakaf telah menolak pembaharuan data {$this->approval->type}.";
             } else {
-                $message = "Permintaan data {$this->approval->type} jam {$currentTime} telah diproses.";
+                $message = "Permintaan data {$this->approval->type} telah diproses.";
             }
         }
 
@@ -59,7 +58,7 @@ class RejectionNotification extends Notification
             'type' => $this->approval->type,
             'status' => $this->approval->status,
             'details' => $data, // Sertakan data yang relevan
-            'id_approval' => $this->approval->id,
+		    'id_approval' => $this->approval->id,
         ];
     }
 }
