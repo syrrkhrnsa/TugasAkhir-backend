@@ -230,6 +230,8 @@ class TanahController extends Controller
                     'luasTanah' => $request->luasTanah ?? $tanah->luasTanah,
                 ];
 
+                $tanah->update(['status' => 'ditinjau']);
+
                 // Buat approval dengan data sebelumnya dan data yang diperbarui
                 $approval = Approval::create([
                     'user_id' => $user->id,

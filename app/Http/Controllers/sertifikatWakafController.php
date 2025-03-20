@@ -303,6 +303,8 @@ class SertifikatWakafController extends Controller
                     'dokSw' => $request->dokSw ?? $sertifikat->dokSw,
                 ];
 
+                $sertifikat->update(['status' => 'ditinjau']);
+
                 // Buat approval dengan data sebelumnya dan data yang diperbarui
                 $approval = Approval::create([
                     'user_id' => $user->id,
@@ -312,7 +314,6 @@ class SertifikatWakafController extends Controller
                         'previous_data' => $previousData,
                         'updated_data' => $data
                     ]),
-                    'status' => 'ditinjau',
                 ]);
 
                 // Kirim notifikasi ke Bidgar Wakaf
