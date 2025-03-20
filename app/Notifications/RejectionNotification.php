@@ -59,6 +59,7 @@ class RejectionNotification extends Notification
             'type' => $this->approval->type,
             'status' => $this->approval->status,
             'details' => $data, // Sertakan data yang relevan
+            'id_approval' => $this->approval->id,
         ];
     }
 }
