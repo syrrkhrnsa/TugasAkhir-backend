@@ -156,6 +156,19 @@ class SertifikatWakafController extends Controller
         }
     }
 
+    public function show($id)
+{
+    // Ambil data sertifikat berdasarkan ID
+    $sertifikat = Sertifikat::find($id);
+
+    if (!$sertifikat) {
+        return response()->json(['message' => 'Sertifikat tidak ditemukan'], 404);
+    }
+
+    // Kembalikan data sertifikat sebagai response JSON
+    return response()->json($sertifikat);
+}
+
     // Menyimpan data sertifikat baru
     public function store(Request $request)
 {
