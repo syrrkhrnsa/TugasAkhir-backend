@@ -61,6 +61,7 @@ class ApprovalNotification extends Notification
             'type' => $this->approval->type,
             'status' => $this->approval->status,
             'details' => $details, // Sertakan data yang relevan
+            'id_approval' => $this->approval->id,
         ];
     }
 }
