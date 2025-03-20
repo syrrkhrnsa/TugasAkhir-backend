@@ -117,6 +117,7 @@ class ApprovalController extends Controller
 
     public function approveUpdate($id)
 {
+    
     $user = Auth::user();
     if (!$user || $user->role_id !== '26b2b64e-9ae3-4e2e-9063-590b1bb00480') {
         return response()->json(["status" => "error", "message" => "Anda tidak memiliki izin"], 403);
@@ -126,6 +127,9 @@ class ApprovalController extends Controller
     if (!$approval) {
         return response()->json(["status" => "error", "message" => "Permintaan tidak ditemukan"], 404);
     }
+
+    $approval->update(['status' => 'disetujui', 'approver_id' => $user->id]);
+
 
     // Decode data untuk melihat perubahan yang diajukan
     $data = json_decode($approval->data, true);
@@ -154,6 +158,7 @@ class ApprovalController extends Controller
         }
 
         $tanah = Tanah::where('id_tanah', $data['updated_data']['id_tanah'])->first();
+        $tanah->update(['status' => 'disetujui']);
         if (!$tanah) {
             Log::error('Data tanah tidak ditemukan', ['id_tanah' => $data['updated_data']['id_tanah']]);
             return response()->json(["status" => "error", "message" => "Data tanah tidak ditemukan"], 404);
@@ -169,6 +174,7 @@ class ApprovalController extends Controller
         }
 
         $sertifikat = Sertifikat::where('id_sertifikat', $data['updated_data']['id_sertifikat'])->first();
+        $sertifikat->update(['status' => 'disetujui']);
         if (!$sertifikat) {
             Log::error('Data sertifikat tidak ditemukan', ['id_sertifikat' => $data['updated_data']['id_sertifikat']]);
             return response()->json(["status" => "error", "message" => "Data sertifikat tidak ditemukan"], 404);
@@ -182,8 +188,7 @@ class ApprovalController extends Controller
     }
 
     // Update status persetujuan
-    $approval->update(['status' => 'disetujui', 'approver_id' => $user->id]);
-
+    
     // Kirim notifikasi ke Pimpinan Jamaah
     $pimpinanJamaah = User::find($approval->user_id);
     $pimpinanJamaah->notify(new ApprovalNotification($approval, 'approve_update', 'pimpinan_jamaah'));
