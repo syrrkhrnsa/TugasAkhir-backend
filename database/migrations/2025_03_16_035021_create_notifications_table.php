@@ -17,11 +17,15 @@ return new class extends Migration
             $table->uuid('notifiable_id'); // Ubah ke UUID
             $table->string('notifiable_type'); // Tipe model yang terkait
             $table->text('data'); // Data notifikasi
+            $table->uuid('approval_id')->nullable(); // Kolom baru untuk relasi ke approvals
             $table->timestamp('read_at')->nullable(); // Waktu notifikasi dibaca
             $table->timestamps(); // created_at dan updated_at
-
+        
             // Index untuk kolom notifiable
             $table->index(['notifiable_id', 'notifiable_type']);
+        
+            // Foreign key untuk approval_id
+            $table->foreign('approval_id')->references('id')->on('approvals')->onDelete('cascade');
         });
     }
 
