@@ -219,6 +219,7 @@ public function rejectUpdate($id)
     if ($approval->type === 'tanah_update') {
         // Jika tipe approval adalah tanah_update, kembalikan data tanah ke versi sebelumnya
         $tanah = Tanah::where('id_tanah', $data['previous_data']['id_tanah'])->first();
+        $tanah->update(['status' => 'disetujui']);
         if (!$tanah) {
             return response()->json(["status" => "error", "message" => "Data tanah tidak ditemukan"], 404);
         }
@@ -226,6 +227,7 @@ public function rejectUpdate($id)
     } elseif ($approval->type === 'sertifikat_update') {
         // Jika tipe approval adalah sertifikat_update, kembalikan data sertifikat ke versi sebelumnya
         $sertifikat = Sertifikat::where('id_sertifikat', $data['previous_data']['id_sertifikat'])->first();
+        $sertifikat->update(['status' => 'disetujui']);
         if (!$sertifikat) {
             return response()->json(["status" => "error", "message" => "Data sertifikat tidak ditemukan"], 404);
         }
