@@ -32,8 +32,19 @@ class ApprovalNotification extends Notification
         $data = json_decode($this->approval->data, true);
         $previousData = $data['previous_data'] ?? [];
 
-        // Ambil NamaPimpinanJamaah, jika kosong pakai previous_data
-        $namaPimpinanJamaah = $data['NamaPimpinanJamaah'] ?? $previousData['NamaPimpinanJamaah'] ?? 'Unknown';
+        $namaPimpinanJamaah = $data['NamaPimpinanJamaah'] ?? $previousData['NamaPimpinanJamaah'] ?? null;
+
+    // Jika NamaPimpinanJamaah masih kosong, ambil dari tabel users berdasarkan user_id
+    if (empty($namaPimpinanJamaah)) {
+        $userId = $this->approval->user_id; // Asumsikan user_id tersedia di approval
+        $user = \App\Models\User::find($userId); // Query ke tabel users
+
+        if ($user) {
+            $namaPimpinanJamaah = $user->name; // Asumsikan kolom nama di tabel users adalah 'name'
+        } else {
+            $namaPimpinanJamaah = 'Unknown';
+        }
+    }
 
         // Jika penerima adalah Bidgar Wakaf
         if ($this->recipient === 'bidgar') {
@@ -69,6 +80,3 @@ class ApprovalNotification extends Notification
         ];
     }
 }
-
-
-
