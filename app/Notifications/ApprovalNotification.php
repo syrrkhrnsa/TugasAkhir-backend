@@ -31,6 +31,8 @@ class ApprovalNotification extends Notification
     {
         $data = json_decode($this->approval->data, true);
         $previousData = $data['previous_data'] ?? [];
+        $username = \App\Models\User::find($this->approval->user_id)?->name;
+        $approvername = \App\Models\User::find($this->approval->approver_id)?->name;
 
         $namaPimpinanJamaah = $data['NamaPimpinanJamaah'] ?? $previousData['NamaPimpinanJamaah'] ?? null;
 
@@ -77,6 +79,8 @@ class ApprovalNotification extends Notification
             'status' => $this->approval->status,
             'details' => $details,
 	        'id_approval' => $this->approval->id,
+            'username' => $username,
+            'approvername' => $approvername
         ];
     }
 }

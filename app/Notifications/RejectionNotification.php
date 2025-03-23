@@ -30,24 +30,43 @@ class RejectionNotification extends Notification
     public function toArray($notifiable)
     {
         $data = json_decode($this->approval->data, true);
-        $namaPimpinanJamaah = $data['NamaPimpinanJamaah'] ?? 'Unknown';
+        $previousData = $data['previous_data'] ?? [];
+        $username = \App\Models\User::find($this->approval->user_id)?->name;
+        $approvername = \App\Models\User::find($this->approval->approver_id)?->name;
+
+        $namaPimpinanJamaah = $data['NamaPimpinanJamaah'] ?? $previousData['NamaPimpinanJamaah'] ?? null;
+
+        if (empty($namaPimpinanJamaah)) {
+            $userId = $this->approval->user_id; // Asumsikan user_id tersedia di approval
+            $user = \App\Models\User::find($userId); // Query ke tabel users
+    
+            if ($user) {
+                $namaPimpinanJamaah = $user->name; // Asumsikan kolom nama di tabel users adalah 'name'
+            } else {
+                $namaPimpinanJamaah = 'Unknown';
+            }
+        }
 
         // Pesan untuk Bidgar Wakaf
         if ($this->recipient === 'bidgar') {
-            if ($this->action === 'reject') {
+            if ($this->action === 'create') {
                 $message = "Permintaan persetujuan data {$this->approval->type} oleh {$namaPimpinanJamaah}.";
             } elseif ($this->action === 'reject_update') {
-                $message = "Permintaan pembaharuan data {$this->approval->type} oleh {$namaPimpinanJamaah}.";
+                $type = str_replace("_update", "", $this->approval->type);
+                $message = "Pembaharuan data {$type} oleh {$namaPimpinanJamaah}.";
+                $message = "Permintaan pembaharuan data {$type} oleh {$namaPimpinanJamaah}.";
             } else {
                 $message = "Permintaan data {$this->approval->type} oleh {$namaPimpinanJamaah} telah diproses.";
             }
         }
+
         // Pesan untuk Pimpinan Jamaah
         elseif ($this->recipient === 'pimpinan_jamaah') {
             if ($this->action === 'reject') {
                 $message = "Bidgar Wakaf telah menolak pembuatan data {$this->approval->type}.";
             } elseif ($this->action === 'reject_update') {
-                $message = "Bidgar Wakaf telah menolak pembaharuan data {$this->approval->type}.";
+                $type = str_replace("_update", "", $this->approval->type);
+                $message = "Bidgar Wakaf telah menolak pembaharuan data {$type}.";
             } else {
                 $message = "Permintaan data {$this->approval->type} telah diproses.";
             }
@@ -59,6 +78,8 @@ class RejectionNotification extends Notification
             'status' => $this->approval->status,
             'details' => $data, // Sertakan data yang relevan
 		    'id_approval' => $this->approval->id,
+            'username' => $username,
+            'approvername' => $approvername
         ];
     }
 }
