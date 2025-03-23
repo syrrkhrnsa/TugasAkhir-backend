@@ -177,9 +177,9 @@ class SertifikatWakafController extends Controller
             'noDokumenBastw' => 'nullable|string|unique:sertifikats',
             'noDokumenAIW' => 'nullable|string|unique:sertifikats',
             'noDokumenSW' => 'nullable|string|unique:sertifikats',
-            'dokBastw' => 'nullable|string',
-            'dokAiw' => 'nullable|string',
-            'dokSw' => 'nullable|string',
+            'dokBastw' => 'nullable|file|mimes:pdf,doc,docx|max:10240',
+            'dokAiw' => 'nullable|file|mimes:pdf,doc,docx|max:10240',
+            'dokSw' => 'nullable|file|mimes:pdf,doc,docx|max:10240',
             'id_tanah' => 'required|uuid',
         ]);
 
@@ -196,6 +196,10 @@ class SertifikatWakafController extends Controller
             return response()->json(["status" => "error", "message" => "User tidak terautentikasi"], Response::HTTP_UNAUTHORIZED);
         }
 
+        $dokBastwPath = $request->file('dokBastw') ? $request->file('dokBastw')->store('dokumen', 'public') : null;
+        $dokAiwPath = $request->file('dokAiw') ? $request->file('dokAiw')->store('dokumen', 'public') : null;
+        $dokSwPath = $request->file('dokSw') ? $request->file('dokSw')->store('dokumen', 'public') : null;
+
         // ID role
         $rolePimpinanJamaah = '326f0dde-2851-4e47-ac5a-de6923447317';
         $rolePimpinanCabang = '3594bece-a684-4287-b0a2-7429199772a3';
@@ -210,9 +214,9 @@ class SertifikatWakafController extends Controller
                 'noDokumenAIW' => $request->noDokumenAIW,
                 'noDokumenSW' => $request->noDokumenSW,
                 'legalitas' => "N/A",
-                'dokBastw' => $request->dokBastw,
-                'dokAiw' => $request->dokAiw,
-                'dokSw' => $request->dokSw,
+                'dokBastw' => $dokBastwPath,
+                'dokAiw' => $dokAiwPath,
+                'dokSw' => $dokSwPath,
                 'user_id' => $user->id,
             ];
 
@@ -245,9 +249,9 @@ class SertifikatWakafController extends Controller
                 'status' => "disetujui",
                 'legalitas' => 'N/A',
                 'user_id' => $user->id,
-                'dokBastw' => $request->dokBastw,
-                'dokAiw' => $request->dokAiw,
-                'dokSw' => $request->dokSw,
+                'dokBastw' => $dokBastwPath,
+                'dokAiw' => $dokAiwPath,
+                'dokSw' => $dokSwPath,
             ]);
 
             return response()->json([
