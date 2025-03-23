@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Tanah;
 use App\Models\Approval;
+use App\Models\Sertifikat;
 use App\Notifications\ApprovalNotification;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -124,13 +125,16 @@ class TanahController extends Controller
 
         // ID role
         $rolePimpinanJamaah = '326f0dde-2851-4e47-ac5a-de6923447317';
-        $rolePimpinanCabang = '3594bece-a684-4287-b0a2-7429199772a3';
         $roleBidgarWakaf = '26b2b64e-9ae3-4e2e-9063-590b1bb00480';
+
+        // Buat ID tanah dan ID sertifikat
+        $idTanah = Str::uuid();
+        $idSertifikat = Str::uuid();
 
         if ($user->role_id === $rolePimpinanJamaah) {
             // Jika Pimpinan Jamaah, data disimpan ke tabel Approval
             $data = [
-                'id_tanah' => Str::uuid(),
+                'id_tanah' => $idTanah,
                 'NamaPimpinanJamaah' => $request->NamaPimpinanJamaah,
                 'NamaWakif' => $request->NamaWakif,
                 'lokasi' => $request->lokasi,
@@ -141,7 +145,7 @@ class TanahController extends Controller
             $approval = Approval::create([
                 'user_id' => $user->id,
                 'type' => 'tanah',
-                'data_id' => Str::uuid(),
+                'data_id' => $idTanah,
                 'data' => json_encode($data),
                 'status' => 'ditinjau',
             ]);
@@ -149,7 +153,7 @@ class TanahController extends Controller
             // Kirim notifikasi ke Bidgar Wakaf
             $bidgarWakaf = User::where('role_id', $roleBidgarWakaf)->get();
             foreach ($bidgarWakaf as $bidgar) {
-                $bidgar->notify(new ApprovalNotification($approval, 'create', 'bidgar')); // Tambahkan 'bidgar' sebagai recipient
+                $bidgar->notify(new ApprovalNotification($approval, 'create', 'bidgar'));
             }
 
             return response()->json([
@@ -159,7 +163,7 @@ class TanahController extends Controller
         } else {
             // Jika Pimpinan Cabang atau Bidgar Wakaf, langsung simpan ke tabel Tanah
             $tanah = Tanah::create([
-                'id_tanah' => Str::uuid(),
+                'id_tanah' => $idTanah,
                 'NamaPimpinanJamaah' => $request->NamaPimpinanJamaah,
                 'NamaWakif' => $request->NamaWakif,
                 'lokasi' => $request->lokasi,
@@ -169,10 +173,20 @@ class TanahController extends Controller
                 'user_id' => $user->id,
             ]);
 
+            // Simpan data sertifikat dengan id_tanah dan id_sertifikat
+            $sertifikat = Sertifikat::create([
+                'id_sertifikat' => $idSertifikat,
+                'id_tanah' => $idTanah,
+                'legalitas' => 'N/A',
+                'status' => 'Proses',
+                'user_id' => $user->id,
+            ]);
+
             return response()->json([
                 "status" => "success",
-                "message" => "Data tanah berhasil ditambahkan dan disetujui.",
-                "data" => $tanah
+                "message" => "Data tanah dan sertifikat berhasil ditambahkan dan disetujui.",
+                "data_tanah" => $tanah,
+                "data_sertifikat" => $sertifikat
             ], Response::HTTP_CREATED);
         }
     } catch (\Exception $e) {
@@ -183,6 +197,7 @@ class TanahController extends Controller
         ], Response::HTTP_INTERNAL_SERVER_ERROR);
     }
 }
+
     // PUT: Update data tanah
     public function update(Request $request, $id)
     {
