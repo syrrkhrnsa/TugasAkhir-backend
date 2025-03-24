@@ -36,6 +36,7 @@ Route::get('/sertifikat/public', [sertifikatWakafController::class, 'publicIndex
 Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/data/user', [UserController::class, 'index']);
+    Route::get('/data/user/{id}', [UserController::class, 'show']);
 
     //API TANAH
     Route::get('/tanah', [TanahController::class, 'index']);
@@ -70,7 +71,7 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::get('/log-tanah', [ActivityLogController::class, 'logTanah']);
     Route::get('/log-sertifikat', [ActivityLogController::class, 'logSertifikat']);
     Route::get('/log-status', [ActivityLogController::class, 'logStatus']);
-    Route::get('/log-user/{userId}', [ActivityLogController::class, 'logByUser']);    
+    Route::get('/log-user/{userId}', [ActivityLogController::class, 'logByUser']);
     Route::post('/notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead']);
 });
 
