@@ -72,9 +72,4 @@ class User extends Authenticatable
     {
         return $this->morphMany(CustomNotification::class, 'notifiable')->latest();
     }
-
-    public function unreadNotifications()
-    {
-        return $this->notifications()->whereNull('read_at');
-    }
 }
