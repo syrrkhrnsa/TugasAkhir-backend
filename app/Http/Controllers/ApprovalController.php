@@ -197,11 +197,11 @@ class ApprovalController extends Controller
         $tanah->update($data['updated_data']);
     } elseif ($approval->type === 'sertifikat_update') {
         // Jika tipe approval adalah sertifikat_update, update data di tabel Sertifikat
-        if (!isset($data['updated_data']['id_sertifikat'])) {
+        $idSertifikat = $data['updated_data']['id_sertifikat'] ?? $data['previous_data']['id_sertifikat'] ?? null;
+        if (!$idSertifikat) {
             Log::error('Key id_sertifikat tidak ditemukan dalam updated_data', ['approval_id' => $id, 'updated_data' => $data['updated_data']]);
             return response()->json(["status" => "error", "message" => "Data sertifikat tidak valid: id_sertifikat tidak ditemukan"], 400);
         }
-
         $sertifikat = Sertifikat::where('id_sertifikat', $data['updated_data']['id_sertifikat'])->first();
         $sertifikat->update(['status' => 'disetujui']);
         if (!$sertifikat) {

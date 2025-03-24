@@ -179,8 +179,10 @@ class TanahController extends Controller
             // Kirim notifikasi ke Bidgar Wakaf
             $bidgarWakaf = User::where('role_id', $roleBidgarWakaf)->get();
             foreach ($bidgarWakaf as $bidgar) {
-                $bidgar->notify(new ApprovalNotification($approval, 'create', 'bidgar'));
+                $bidgar->notify(new ApprovalNotification($approval_tanah, 'create', 'bidgar'));
             }
+
+
 
             return response()->json([
                 "status" => "success",
