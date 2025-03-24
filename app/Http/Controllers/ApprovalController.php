@@ -13,6 +13,7 @@ use Illuminate\Support\Str;
 use App\Models\User; // Import model User
 use App\Notifications\ApprovalNotification; // Import notifikasi ApprovalNotification
 use App\Notifications\RejectionNotification; // Import notifikasi RejectionNotification
+use Illuminate\Support\Facades\DB;
 
 class ApprovalController extends Controller
 {
@@ -76,44 +77,72 @@ class ApprovalController extends Controller
 
 
     public function approve($id)
-    {
-        $user = Auth::user();
-        if (!$user || $user->role_id !== '26b2b64e-9ae3-4e2e-9063-590b1bb00480') {
-            return response()->json(["status" => "error", "message" => "Anda tidak memiliki izin"], 403);
-        }
-    
-        $approval = Approval::find($id);
-        if (!$approval) {
-            return response()->json(["status" => "error", "message" => "Permintaan tidak ditemukan"], 404);
-        }
-    
-        // Decode JSON dari 'data' yang ada dalam approval
-        $data = json_decode($approval->data, true);
-    
-        // Pastikan 'data' sudah terdecode dengan benar
-        if (!$data) {
-            return response()->json(["status" => "error", "message" => "Data tidak valid"], 400);
-        }
-    
-        // Cek tipe approval
-        if ($approval->type === 'tanah') {
-            // Jika tipe approval adalah tanah, simpan data ke tabel Tanah
-            Tanah::create(array_merge($data, ['status' => 'disetujui', 'user_id' => $approval->user_id]));
-        } elseif ($approval->type === 'sertifikat') {
-            // Jika tipe approval adalah sertifikat, simpan data ke tabel Sertifikat
-            Sertifikat::create(array_merge($data, ['status' => 'disetujui', 'user_id' => $approval->user_id]));
-        } else {
-            return response()->json(["status" => "error", "message" => "Tipe approval tidak valid"], 400);
-        }
-    
-        // Update status persetujuan
-        $approval->update(['status' => 'disetujui', 'approver_id' => $user->id]);
-    
-        $pimpinanJamaah = User::find($approval->user_id);
-        $pimpinanJamaah->notify(new ApprovalNotification($approval, 'approve', 'pimpinan_jamaah')); // Tambahkan 'pimpinan_jamaah' sebagai recipient
-
-        return response()->json(["status" => "success", "message" => "Permintaan disetujui"], 200);
+{
+    $user = Auth::user();
+    if (!$user || $user->role_id !== '26b2b64e-9ae3-4e2e-9063-590b1bb00480') {
+        return response()->json(["status" => "error", "message" => "Anda tidak memiliki izin"], 403);
     }
+
+    $approval = Approval::find($id);
+    if (!$approval) {
+        return response()->json(["status" => "error", "message" => "Permintaan tidak ditemukan"], 404);
+    }
+
+    // Decode JSON dari 'data' yang ada dalam approval
+    $data = json_decode($approval->data, true);
+
+    // Pastikan 'data' sudah terdecode dengan benar
+    if (!$data) {
+        return response()->json(["status" => "error", "message" => "Data tidak valid"], 400);
+    }
+
+    // Cek tipe approval
+    if ($approval->type === 'tanah_dan_sertifikat') {
+        // Jika tipe approval adalah tanah dan sertifikat, simpan data ke tabel Tanah dan Sertifikat
+        DB::beginTransaction();
+        try {
+            // Simpan data tanah
+            $tanah = Tanah::create(array_merge($data['tanah'], [
+                'status' => 'disetujui',
+                'user_id' => $approval->user_id,
+            ]));
+
+            // Simpan data sertifikat
+            $sertifikat = Sertifikat::create(array_merge($data['sertifikat'], [
+                'status' => 'disetujui',
+                'user_id' => $approval->user_id,
+                'id_tanah' => $tanah->id_tanah, // Hubungkan sertifikat dengan tanah
+            ]));
+
+            // Update status persetujuan
+            $approval->update(['status' => 'disetujui', 'approver_id' => $user->id]);
+
+            DB::commit();
+
+            // Kirim notifikasi ke Pimpinan Jamaah
+            $pimpinanJamaah = User::find($approval->user_id);
+            $pimpinanJamaah->notify(new ApprovalNotification($approval, 'approve', 'pimpinan_jamaah'));
+
+            return response()->json([
+                "status" => "success",
+                "message" => "Permintaan tanah dan sertifikat disetujui.",
+                "data" => [
+                    'tanah' => $tanah,
+                    'sertifikat' => $sertifikat,
+                ]
+            ], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                "status" => "error",
+                "message" => "Terjadi kesalahan saat menyimpan data",
+                "error" => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    } else {
+        return response()->json(["status" => "error", "message" => "Tipe approval tidak valid"], 400);
+    }
+}
 
     public function approveUpdate($id)
 {
