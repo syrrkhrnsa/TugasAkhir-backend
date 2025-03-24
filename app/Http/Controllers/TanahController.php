@@ -14,6 +14,8 @@ use Ramsey\Uuid\Uuid;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use App\Models\Sertifikat;
+use Illuminate\Support\Facades\DB;
 
 class TanahController extends Controller
 {
@@ -108,6 +110,12 @@ class TanahController extends Controller
             'NamaWakif' => 'required|string',
             'lokasi' => 'required|string',
             'luasTanah' => 'required|string',
+            'noDokumenBastw' => 'nullable|string|unique:sertifikats',
+            'noDokumenAIW' => 'nullable|string|unique:sertifikats',
+            'noDokumenSW' => 'nullable|string|unique:sertifikats',
+            'dokBastw' => 'nullable|string',
+            'dokAiw' => 'nullable|string',
+            'dokSw' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -131,22 +139,40 @@ class TanahController extends Controller
         $idTanah = Str::uuid();
         $idSertifikat = Str::uuid();
 
+        $id_tanah = Str::uuid();
+        $id_sertifikat = Str::uuid();
+
+        $dataTanah = [
+            'id_tanah' => $id_tanah,
+            'NamaPimpinanJamaah' => $request->NamaPimpinanJamaah,
+            'NamaWakif' => $request->NamaWakif,
+            'lokasi' => $request->lokasi,
+            'luasTanah' => $request->luasTanah,
+            'legalitas' => 'N/A',
+        ];
+
+        $dataSertifikat = [
+            'id_sertifikat' => $id_sertifikat,
+            'id_tanah' => $id_tanah,
+            'noDokumenBastw' => $request->noDokumenBastw,
+            'noDokumenAIW' => $request->noDokumenAIW,
+            'noDokumenSW' => $request->noDokumenSW,
+            'legalitas' => 'N/A',
+            'dokBastw' => $request->dokBastw,
+            'dokAiw' => $request->dokAiw,
+            'dokSw' => $request->dokSw,
+        ];
+
         if ($user->role_id === $rolePimpinanJamaah) {
             // Jika Pimpinan Jamaah, data disimpan ke tabel Approval
-            $data = [
-                'id_tanah' => $idTanah,
-                'NamaPimpinanJamaah' => $request->NamaPimpinanJamaah,
-                'NamaWakif' => $request->NamaWakif,
-                'lokasi' => $request->lokasi,
-                'luasTanah' => $request->luasTanah,
-                'legalitas' => 'N/A',
-            ];
-
             $approval = Approval::create([
                 'user_id' => $user->id,
-                'type' => 'tanah',
-                'data_id' => $idTanah,
-                'data' => json_encode($data),
+                'type' => 'tanah_dan_sertifikat',
+                'data_id' => Str::uuid(),
+                'data' => json_encode([
+                    'tanah' => $dataTanah,
+                    'sertifikat' => $dataSertifikat,
+                ]),
                 'status' => 'ditinjau',
             ]);
 
@@ -161,32 +187,22 @@ class TanahController extends Controller
                 "message" => "Permintaan telah dikirim ke Bidgar Wakaf untuk ditinjau.",
             ], Response::HTTP_CREATED);
         } else {
-            // Jika Pimpinan Cabang atau Bidgar Wakaf, langsung simpan ke tabel Tanah
-            $tanah = Tanah::create([
-                'id_tanah' => $idTanah,
-                'NamaPimpinanJamaah' => $request->NamaPimpinanJamaah,
-                'NamaWakif' => $request->NamaWakif,
-                'lokasi' => $request->lokasi,
-                'luasTanah' => $request->luasTanah,
-                'legalitas' => 'N/A',
-                'status' => 'disetujui',
-                'user_id' => $user->id,
-            ]);
+            // Jika Pimpinan Cabang atau Bidgar Wakaf, langsung simpan ke tabel Tanah dan Sertifikat
+            $tanah = null;
+            $sertifikat = null;
 
-            // Simpan data sertifikat dengan id_tanah dan id_sertifikat
-            $sertifikat = Sertifikat::create([
-                'id_sertifikat' => $idSertifikat,
-                'id_tanah' => $idTanah,
-                'legalitas' => 'N/A',
-                'status' => 'Proses',
-                'user_id' => $user->id,
-            ]);
+            DB::transaction(function () use ($dataTanah, $dataSertifikat, $user, &$tanah, &$sertifikat) {
+                $tanah = Tanah::create(array_merge($dataTanah, ['status' => 'disetujui', 'user_id' => $user->id]));
+                $sertifikat = Sertifikat::create(array_merge($dataSertifikat, ['status' => 'disetujui', 'user_id' => $user->id]));
+            });
 
             return response()->json([
                 "status" => "success",
                 "message" => "Data tanah dan sertifikat berhasil ditambahkan dan disetujui.",
-                "data_tanah" => $tanah,
-                "data_sertifikat" => $sertifikat
+                "data" => [
+                    'tanah' => $tanah,
+                    'sertifikat' => $sertifikat,
+                ]
             ], Response::HTTP_CREATED);
         }
     } catch (\Exception $e) {
