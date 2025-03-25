@@ -32,7 +32,7 @@ class Sertifikat extends Model
     // Relasi dengan Tanah
     public function tanah()
     {
-        return $this->belongsTo(Tanah::class, 'id_tanah', 'id_tanah'); // Adjusted relation to match the foreign key
+        return $this->belongsTo(Tanah::class, 'id_tanah', 'id_tanah');
     }
 
     // Relasi dengan User
