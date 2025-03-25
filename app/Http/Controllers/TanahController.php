@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Tanah;
 use App\Models\Approval;
+use App\Models\Sertifikat;
 use App\Notifications\ApprovalNotification;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -132,8 +133,11 @@ class TanahController extends Controller
 
         // ID role
         $rolePimpinanJamaah = '326f0dde-2851-4e47-ac5a-de6923447317';
-        $rolePimpinanCabang = '3594bece-a684-4287-b0a2-7429199772a3';
         $roleBidgarWakaf = '26b2b64e-9ae3-4e2e-9063-590b1bb00480';
+
+        // Buat ID tanah dan ID sertifikat
+        $idTanah = Str::uuid();
+        $idSertifikat = Str::uuid();
 
         $id_tanah = Str::uuid();
         $id_sertifikat = Str::uuid();
@@ -175,8 +179,10 @@ class TanahController extends Controller
             // Kirim notifikasi ke Bidgar Wakaf
             $bidgarWakaf = User::where('role_id', $roleBidgarWakaf)->get();
             foreach ($bidgarWakaf as $bidgar) {
-                $bidgar->notify(new ApprovalNotification($approval, 'create', 'bidgar'));
+                $bidgar->notify(new ApprovalNotification($approval_tanah, 'create', 'bidgar'));
             }
+
+
 
             return response()->json([
                 "status" => "success",
@@ -209,6 +215,7 @@ class TanahController extends Controller
         ], Response::HTTP_INTERNAL_SERVER_ERROR);
     }
 }
+
     // PUT: Update data tanah
     public function update(Request $request, $id)
     {
