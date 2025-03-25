@@ -23,7 +23,6 @@ class Tanah extends Model
         'luasTanah',
         'legalitas',
         'status',
-        'id_sertifikat',
         'user_id' // Menambahkan kolom user_id
     ];
     
@@ -31,7 +30,7 @@ class Tanah extends Model
     // Relasi dengan Sertifikat
     public function sertifikat()
     {
-        return $this->belongsTo(Sertifikat::class, 'id_sertifikat', 'id_sertifikat');
+        return $this->hasOne(Sertifikat::class, 'tanah_id', 'id_tanah');
     }
 
     // Relasi dengan User
