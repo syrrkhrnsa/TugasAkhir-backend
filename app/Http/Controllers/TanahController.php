@@ -14,7 +14,6 @@ use Ramsey\Uuid\Uuid;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use App\Models\Sertifikat;
 use Illuminate\Support\Facades\DB;
 
 class TanahController extends Controller
@@ -179,7 +178,7 @@ class TanahController extends Controller
             // Kirim notifikasi ke Bidgar Wakaf
             $bidgarWakaf = User::where('role_id', $roleBidgarWakaf)->get();
             foreach ($bidgarWakaf as $bidgar) {
-                $bidgar->notify(new ApprovalNotification($approval_tanah, 'create', 'bidgar'));
+                $bidgar->notify(new ApprovalNotification($approval, 'create', 'bidgar'));
             }
 
 

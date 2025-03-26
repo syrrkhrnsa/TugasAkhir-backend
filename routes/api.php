@@ -46,16 +46,21 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::delete('/tanah/{id}', [TanahController::class, 'destroy']);
     Route::put('/tanah/legalitas/{id}', [TanahController::class, 'updateLegalitas']);
 
-      // API Sertifikat Wakaf
+       // API Sertifikat Wakaf
     Route::get('/sertifikat', [sertifikatWakafController::class, 'index']);
     Route::get('/sertifikat/{id}', [sertifikatWakafController::class, 'show']);
     Route::post('/sertifikat', [sertifikatWakafController::class, 'store']);
-    Route::put('/sertifikat/{id}', [sertifikatWakafController::class, 'update']);
+    
+    // Fixed route closure - added missing closing });
+    Route::post('/sertifikat/{id}', function (Request $request, $id) {
+        $request->setMethod('PUT');
+        return app()->make(sertifikatWakafController::class)->update($request, $id);
+    }); // This closing brace was missing
+    
     Route::put('/sertifikat/legalitas/{id}', [sertifikatWakafController::class, 'updateLegalitas']);
     Route::delete('/sertifikat/{id}', [sertifikatWakafController::class, 'destroy']);
     Route::get('/sertifikat/legalitas/{id}', [sertifikatWakafController::class, 'showLegalitas']);
-    Route::get('/sertifikat/tanah/{id_tanah}', [SertifikatWakafController::class, 'getSertifikatByIdTanah']);
-
+    Route::get('/sertifikat/tanah/{id_tanah}', [sertifikatWakafController::class, 'getSertifikatByIdTanah']);
     Route::get('/approvals', [ApprovalController::class, 'index']);
     Route::get('/approvals/{id}', [ApprovalController::class, 'show']);
     Route::post('/approvals/{id}/approve', [ApprovalController::class, 'approve']);
