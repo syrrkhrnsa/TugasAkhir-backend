@@ -13,7 +13,6 @@ use Ramsey\Uuid\Uuid;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use App\Models\Sertifikat;
 use Illuminate\Support\Facades\DB;
 
 class TanahController extends Controller
