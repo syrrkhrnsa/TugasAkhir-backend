@@ -72,9 +72,9 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::get('/log-sertifikat', [ActivityLogController::class, 'logSertifikat']);
     Route::get('/log-status', [ActivityLogController::class, 'logStatus']);
     Route::get('/log-user/{userId}', [ActivityLogController::class, 'logByUser']);
-    Route::get('/log-tanah-sertifikat/{sertifikatId}', [ActivityLogController::class, 'logTanahDanSertifikat']);
+    Route::get('/log-tanah/{tanahId}', [ActivityLogController::class, 'logByTanahId']); // by id tanah 
+    Route::get('/log-sertifikat/{sertifikatId}', [ActivityLogController::class, 'logBySertifikatId']); //by id sertifikat
     Route::get('/log-semua-tanah-sertifikat', [ActivityLogController::class, 'logSemuaTanahDanSertifikat']);
-
 
     Route::post('/notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead']);
 });
