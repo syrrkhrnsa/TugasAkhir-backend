@@ -13,6 +13,8 @@ use Ramsey\Uuid\Uuid;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage; 
+
 
 class SertifikatWakafController extends Controller
 {
@@ -265,22 +267,21 @@ class SertifikatWakafController extends Controller
     }
 }
 
-    // Memperbarui data sertifikat
-    public function update(Request $request, $id)
+public function update(Request $request, $id)
 {
     try {
-
-        Log::info('===== DEBUG REQUEST START =====');
-        Log::info('Request Method: ' . $request->method());
-        Log::info('Request Headers:', $request->headers->all());
-        Log::info('Request Content Type: ' . $request->headers->get('Content-Type'));
-        Log::info('All Input Data:', $request->all());
-        Log::info('Files Received:', $request->file());
-        Log::info('===== DEBUG REQUEST END =====');
-
+        // Perbaikan logging - parameter kedua harus array
+        Log::info('Debug Request Start', [
+            'method' => $request->method(),
+            'headers' => $request->headers->all(),
+            'content_type' => $request->headers->get('Content-Type'),
+            'input_data' => $request->all(),
+            'files' => $request->file() ? array_keys($request->file()) : 'No files'
+        ]);
+        
         $user = Auth::user();
         if (!$user) {
-            return response()->json(["status" => "error", "message" => "User tidak terautentikasi"], Response::HTTP_UNAUTHORIZED);
+            return response()->json(["status" => "error", "message" => "User tidak terautentikasi"], 401);
         }
 
         // ID role
@@ -292,27 +293,20 @@ class SertifikatWakafController extends Controller
             return response()->json([
                 "status" => "error",
                 "message" => "Anda tidak memiliki izin untuk melakukan pembaruan"
-            ], Response::HTTP_FORBIDDEN);
+            ], 403);
         }
 
         // Cek data sertifikat
-        $sertifikat = Sertifikat::find($id);
-        if (!$sertifikat) {
-            return response()->json(["status" => "error", "message" => "Data tidak ditemukan"], Response::HTTP_NOT_FOUND);
-        }
-
-        // Debug request
-        Log::info('Semua Data:', $request->all());
-        Log::info('File yang diterima:', $request->file());
+        $sertifikat = Sertifikat::findOrFail($id);
 
         // Validasi request
         $validator = Validator::make($request->all(), [
             'noDokumenBastw' => 'nullable|string|unique:sertifikats,noDokumenBastw,' . $id . ',id_sertifikat',
             'noDokumenAIW'   => 'nullable|string|unique:sertifikats,noDokumenAIW,' . $id . ',id_sertifikat',
             'noDokumenSW'    => 'nullable|string|unique:sertifikats,noDokumenSW,' . $id . ',id_sertifikat',
-            'dokBastw'       => 'nullable|file|mimes:pdf,doc,docx|max:2048',
-            'dokAiw'         => 'nullable|file|mimes:pdf,doc,docx|max:2048',
-            'dokSw'          => 'nullable|file|mimes:pdf,doc,docx|max:2048',
+            'dokBastw'       => 'nullable|file|mimes:pdf|max:2048',
+            'dokAiw'         => 'nullable|file|mimes:pdf|max:2048',
+            'dokSw'          => 'nullable|file|mimes:pdf|max:2048',
         ]);
 
         if ($validator->fails()) {
@@ -320,10 +314,11 @@ class SertifikatWakafController extends Controller
                 "status" => "error",
                 "message" => "Validasi gagal",
                 "errors" => $validator->errors()
-            ], Response::HTTP_BAD_REQUEST);
+            ], 400);
         }
 
         $updateData = [];
+        $fileChanges = [];
 
         // Handle text inputs
         $textFields = ['noDokumenBastw', 'noDokumenAIW', 'noDokumenSW'];
@@ -337,22 +332,34 @@ class SertifikatWakafController extends Controller
         $fileFields = ['dokBastw', 'dokAiw', 'dokSw'];
         foreach ($fileFields as $field) {
             if ($request->hasFile($field)) {
-                $updateData[$field] = $request->file($field)->store('dokumen', 'public');
+                // Hapus file lama jika ada
+                if ($sertifikat->$field) {
+                    Storage::disk('public')->delete($sertifikat->$field);
+                }
+                
+                // Simpan file baru
+                $path = $request->file($field)->store('dokumen', 'public');
+                $updateData[$field] = $path;
+                $fileChanges[$field] = $path;
             }
         }
 
-        // Cek apakah ada data yang diupdate
+        // Jika tidak ada data yang diupdate
         if (empty($updateData)) {
             return response()->json([
                 "status" => "error",
                 "message" => "Tidak ada data yang diperbarui"
-            ], Response::HTTP_BAD_REQUEST);
+            ], 400);
         }
 
         // Jika user Pimpinan Jamaah, buat approval
         if ($user->role_id === $rolePimpinanJamaah) {
             $previousData = $sertifikat->toArray();
-            $sertifikat->update(array_merge($updateData, ['status' => 'ditinjau']));
+            
+            // Simpan perubahan sementara
+            $sertifikat->fill($updateData);
+            $sertifikat->status = 'ditinjau';
+            $sertifikat->save();
 
             $approval = Approval::create([
                 'user_id' => $user->id,
@@ -362,35 +369,41 @@ class SertifikatWakafController extends Controller
                 'data' => json_encode([
                     'previous_data' => $previousData,
                     'updated_data' => $updateData,
+                    'file_changes' => $fileChanges,
                     'id_sertifikat' => $sertifikat->id_sertifikat
                 ]),
             ]);
 
             // Kirim notifikasi ke Bidgar Wakaf
-            User::where('role_id', $roleBidgarWakaf)->get()->each(function ($bidgar) use ($approval) {
+            $bidgarUsers = User::where('role_id', $roleBidgarWakaf)->get();
+            foreach ($bidgarUsers as $bidgar) {
                 $bidgar->notify(new ApprovalNotification($approval, 'update', 'bidgar'));
-            });
+            }
 
             return response()->json([
                 "status" => "success",
                 "message" => "Permintaan pembaruan telah dikirim ke Bidgar Wakaf untuk ditinjau.",
-            ], Response::HTTP_CREATED);
-        } else {
-            // Bidgar Wakaf bisa langsung update tanpa approval
-            $sertifikat->update($updateData);
+                "approval_id" => $approval->id
+            ], 201);
+        } 
+        
+        // Jika user Bidgar Wakaf, langsung update
+        $sertifikat->update($updateData);
 
-            return response()->json([
-                "status" => "success",
-                "message" => "Data sertifikat berhasil diperbarui.",
-                "data" => $sertifikat
-            ], Response::HTTP_OK);
-        }
+        return response()->json([
+            "status" => "success",
+            "message" => "Data sertifikat berhasil diperbarui.",
+            "data" => $sertifikat,
+            "file_paths" => $fileChanges
+        ], 200);
+
     } catch (\Exception $e) {
+        Log::error('Error in update sertifikat: ' . $e->getMessage());
         return response()->json([
             "status" => "error",
             "message" => "Terjadi kesalahan saat memperbarui data",
             "error" => $e->getMessage()
-        ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        ], 500);
     }
 }
 

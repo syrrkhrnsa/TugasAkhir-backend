@@ -50,12 +50,7 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::get('/sertifikat', [sertifikatWakafController::class, 'index']);
     Route::get('/sertifikat/{id}', [sertifikatWakafController::class, 'show']);
     Route::post('/sertifikat', [sertifikatWakafController::class, 'store']);
-    
-    // Fixed route closure - added missing closing });
-    Route::post('/sertifikat/{id}', function (Request $request, $id) {
-        $request->setMethod('PUT');
-        return app()->make(sertifikatWakafController::class)->update($request, $id);
-    }); // This closing brace was missing
+    Route::put('/sertifikat/{id}', [sertifikatWakafController::class, 'update']);
     
     Route::put('/sertifikat/legalitas/{id}', [sertifikatWakafController::class, 'updateLegalitas']);
     Route::delete('/sertifikat/{id}', [sertifikatWakafController::class, 'destroy']);
@@ -77,6 +72,10 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::get('/log-sertifikat', [ActivityLogController::class, 'logSertifikat']);
     Route::get('/log-status', [ActivityLogController::class, 'logStatus']);
     Route::get('/log-user/{userId}', [ActivityLogController::class, 'logByUser']);
+    Route::get('/log-tanah-sertifikat/{sertifikatId}', [ActivityLogController::class, 'logTanahDanSertifikat']);
+    Route::get('/log-semua-tanah-sertifikat', [ActivityLogController::class, 'logSemuaTanahDanSertifikat']);
+
+
     Route::post('/notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead']);
 });
 
