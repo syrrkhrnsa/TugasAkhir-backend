@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Tanah;
 use App\Models\Approval;
-use App\Models\Sertifikat;
 use App\Notifications\ApprovalNotification;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -19,29 +18,16 @@ use Illuminate\Support\Facades\DB;
 
 class TanahController extends Controller
 {
-    
+
     public function publicIndex()
     {
-        try {
-            // Ambil hanya data dengan status "disetujui"
-            $tanah = Tanah::where('status', 'disetujui')->get();
+        $tanah = Tanah::where('status', 'disetujui')->get();
 
-            return response()->json([
-                "status" => "success",
-                "message" => "Data tanah berhasil diambil",
-                "data" => $tanah
-            ], Response::HTTP_OK);
-        } catch (\Exception $e) {
-            Log::error('Terjadi kesalahan saat mengambil data tanah untuk publik', [
-                'error' => $e->getMessage(),
-                'stack' => $e->getTraceAsString()
-            ]);
-            return response()->json([
-                "status" => "error",
-                "message" => "Terjadi kesalahan saat mengambil data",
-                "error" => $e->getMessage()
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
+        return response()->json([
+            "status" => "success",
+            "message" => "Data tanah berhasil diambil",
+            "data" => $tanah
+        ], Response::HTTP_OK);
     }
 
     public function index()
@@ -179,7 +165,7 @@ class TanahController extends Controller
             // Kirim notifikasi ke Bidgar Wakaf
             $bidgarWakaf = User::where('role_id', $roleBidgarWakaf)->get();
             foreach ($bidgarWakaf as $bidgar) {
-                $bidgar->notify(new ApprovalNotification($approval_tanah, 'create', 'bidgar'));
+                $bidgar->notify(new ApprovalNotification($approval, 'create', 'bidgar'));
             }
 
 
