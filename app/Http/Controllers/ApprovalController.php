@@ -17,13 +17,10 @@ use Illuminate\Support\Facades\DB;
 
 class ApprovalController extends Controller
 {
+
     public function show($id)
 {
     $user = Auth::user();
-
-    if (!$user) {
-        return response()->json(["status" => "error", "message" => "User tidak terautentikasi"], 401);
-    }
 
     // Cek apakah role user adalah Bidgar Wakaf
     $roleBidgarWakaf = '26b2b64e-9ae3-4e2e-9063-590b1bb00480';
@@ -53,11 +50,6 @@ class ApprovalController extends Controller
     public function index()
     {
         $user = Auth::user();
-
-    if (!$user) {
-        return response()->json(["status" => "error", "message" => "User tidak terautentikasi"], 401);
-    }
-
 
     // Hanya Bidgar Wakaf yang bisa melihat notifikasi persetujuan
     $roleBidgarWakaf = '26b2b64e-9ae3-4e2e-9063-590b1bb00480';
@@ -179,7 +171,7 @@ public function approveUpdate($id)
                 Log::error('Data tanah tidak ditemukan', ['id_tanah' => $data['previous_data']['id_tanah']]);
                 return response()->json(["status" => "error", "message" => "Data tanah tidak ditemukan"], 404);
             }
-            
+
             $tanah->update(array_merge(
                 $data['updated_data'],
                 ['status' => 'disetujui']
@@ -188,18 +180,18 @@ public function approveUpdate($id)
         } elseif ($approval->type === 'sertifikat_update') {
             // Gunakan id_sertifikat dari previous_data jika tidak ada di updated_data
             $sertifikatId = $data['updated_data']['id_sertifikat'] ?? $data['previous_data']['id_sertifikat'];
-            
+
             $sertifikat = Sertifikat::find($sertifikatId);
             if (!$sertifikat) {
                 Log::error('Data sertifikat tidak ditemukan', ['id_sertifikat' => $sertifikatId]);
                 return response()->json(["status" => "error", "message" => "Data sertifikat tidak ditemukan"], 404);
             }
-            
+
             $sertifikat->update(array_merge(
                 $data['updated_data'],
                 ['status' => 'disetujui']
             ));
-            
+
         } else {
             return response()->json(["status" => "error", "message" => "Tipe approval tidak valid"], 400);
         }
@@ -315,10 +307,6 @@ public function getByType($type)
 {
     $user = Auth::user();
 
-    if (!$user) {
-        return response()->json(["status" => "error", "message" => "User tidak terautentikasi"], 401);
-    }
-
     // Validasi tipe yang diperbolehkan
     $allowedTypes = ['tanah', 'tanah_update', 'fasilitas', 'fasilitas_update', 'inventaris', 'inventaris_update'];
     if (!in_array($type, $allowedTypes)) {
@@ -331,7 +319,7 @@ public function getByType($type)
         ->get()
         ->map(function ($approval) {
             $parsedData = json_decode($approval->data, true);
-            
+
             return array_merge($parsedData, [
                 'status' => $approval->status
             ]);

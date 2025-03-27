@@ -18,29 +18,16 @@ use Illuminate\Support\Facades\DB;
 
 class TanahController extends Controller
 {
-    
+
     public function publicIndex()
     {
-        try {
-            // Ambil hanya data dengan status "disetujui"
-            $tanah = Tanah::where('status', 'disetujui')->get();
+        $tanah = Tanah::where('status', 'disetujui')->get();
 
-            return response()->json([
-                "status" => "success",
-                "message" => "Data tanah berhasil diambil",
-                "data" => $tanah
-            ], Response::HTTP_OK);
-        } catch (\Exception $e) {
-            Log::error('Terjadi kesalahan saat mengambil data tanah untuk publik', [
-                'error' => $e->getMessage(),
-                'stack' => $e->getTraceAsString()
-            ]);
-            return response()->json([
-                "status" => "error",
-                "message" => "Terjadi kesalahan saat mengambil data",
-                "error" => $e->getMessage()
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
+        return response()->json([
+            "status" => "success",
+            "message" => "Data tanah berhasil diambil",
+            "data" => $tanah
+        ], Response::HTTP_OK);
     }
 
     public function index()
@@ -132,8 +119,11 @@ class TanahController extends Controller
 
         // ID role
         $rolePimpinanJamaah = '326f0dde-2851-4e47-ac5a-de6923447317';
-        $rolePimpinanCabang = '3594bece-a684-4287-b0a2-7429199772a3';
         $roleBidgarWakaf = '26b2b64e-9ae3-4e2e-9063-590b1bb00480';
+
+        // Buat ID tanah dan ID sertifikat
+        $idTanah = Str::uuid();
+        $idSertifikat = Str::uuid();
 
         $id_tanah = Str::uuid();
         $id_sertifikat = Str::uuid();
@@ -178,6 +168,8 @@ class TanahController extends Controller
                 $bidgar->notify(new ApprovalNotification($approval, 'create', 'bidgar'));
             }
 
+
+
             return response()->json([
                 "status" => "success",
                 "message" => "Permintaan telah dikirim ke Bidgar Wakaf untuk ditinjau.",
@@ -209,6 +201,7 @@ class TanahController extends Controller
         ], Response::HTTP_INTERNAL_SERVER_ERROR);
     }
 }
+
     // PUT: Update data tanah
     public function update(Request $request, $id)
     {
