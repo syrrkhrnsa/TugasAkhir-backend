@@ -9,18 +9,17 @@ return new class extends Migration {
     {
         Schema::create('sertifikats', function (Blueprint $table) {
             $table->uuid('id_sertifikat')->primary();
-            $table->string('noDokumenBastw')->nullable()->unique(); // Nomor dokumen BASTW
-            $table->string('noDokumenAIW')->nullable()->unique(); // Nomor dokumen AIW
-            $table->string('noDokumenSW')->nullable()->unique(); // Nomor dokumen SW
+            $table->string('no_dokumen')->nullable()->unique();
+            $table->string('dokumen')->nullable();
+            $table->string('jenis_sertifikat')->nullable();
+            $table->string('status_pengajuan')->nullable();
             $table->string('status');
-            $table->string('legalitas');
             $table->uuid('user_id');
-            $table->string('dokBastw')->nullable();
-            $table->string('dokAiw')->nullable();
-            $table->string('dokSw')->nullable();
+            $table->uuid('id_tanah');
             $table->timestamps();
 
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('id_tanah')->references('id_tanah')->on('tanahs')->onDelete('set null');
         });
     }
 
