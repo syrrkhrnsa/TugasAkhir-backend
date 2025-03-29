@@ -239,15 +239,10 @@ class SertifikatWakafController extends Controller
                 'jenis_sertifikat' => 'nullable|string',
                 'status_pengajuan' => 'nullable|string',
                 'id_tanah' => 'required|uuid',
+                'tanggal_pengajuan' => 'required|date',
+
             ]);
 
-            if ($validator->fails()) {
-                return response()->json([
-                    "status" => "error",
-                    "message" => "Validasi gagal",
-                    "errors" => $validator->errors()
-                ], Response::HTTP_BAD_REQUEST);
-            }
             if ($validator->fails()) {
                 return response()->json([
                     "status" => "error",
@@ -283,6 +278,8 @@ class SertifikatWakafController extends Controller
                     'dokumen' => $request->dokumen,
                     'jenis_sertifikat' => $request->jenis_sertifikat,
                     'status_pengajuan' => $request->status_pengajuan,
+                    'tanggal_pengajuan' => $request->tanggal_pengajuan,
+
                     'status' => 'ditinjau',
                     'user_id' => $user->id,
                 ];
@@ -327,6 +324,7 @@ class SertifikatWakafController extends Controller
                     'dokumen' => $request->dokumen,
                     'jenis_sertifikat' => $request->jenis_sertifikat,
                     'status_pengajuan' => $request->status_pengajuan,
+                    'tanggal_pengajuan' => $request->tanggal_pengajuan,
                     'status' => "disetujui",
                     'user_id' => $user->id,
                 ]);
