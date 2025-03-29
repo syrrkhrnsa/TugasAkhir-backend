@@ -31,51 +31,50 @@ class TanahController extends Controller
     }
 
     public function index()
-    {
-        try {
-            // Ambil user yang sedang login
-            $user = Auth::user();
+{
+    try {
+        $user = Auth::user();
 
-            if (!$user) {
-                Log::error('User tidak terautentikasi');
-                return response()->json(["status" => "error", "message" => "User tidak terautentikasi"], Response::HTTP_UNAUTHORIZED);
-            }
-
-            // ID role yang digunakan untuk filtering
-            $rolePimpinanJamaah = '326f0dde-2851-4e47-ac5a-de6923447317';
-            $rolePimpinanCabang = '3594bece-a684-4287-b0a2-7429199772a3';
-            $roleBidgarWakaf = '26b2b64e-9ae3-4e2e-9063-590b1bb00480';
-
-            // Query data berdasarkan role pengguna
-            if ($user->role_id === $rolePimpinanJamaah) {
-                // Pimpinan Jamaah: hanya melihat data berdasarkan user_id
-                $tanah = Tanah::where('user_id', $user->id)->get();
-            } elseif ($user->role_id === $rolePimpinanCabang || $user->role_id === $roleBidgarWakaf) {
-                // Pimpinan Cabang dan Bidgar Wakaf: hanya melihat data dengan status "disetujui"
-                $tanah = Tanah::where('status', 'disetujui')->get();
-            } else {
-                Log::error('Akses ditolak untuk user', ['user_id' => $user->id, 'role_id' => $user->role_id]);
-                return response()->json(["status" => "error", "message" => "Anda tidak memiliki izin untuk melihat data"], Response::HTTP_FORBIDDEN);
-            }
-
-            return response()->json([
-                "status" => "success",
-                "message" => "Data tanah berhasil diambil",
-                "data" => $tanah
-            ], Response::HTTP_OK);
-        } catch (\Exception $e) {
-            Log::error('Terjadi kesalahan saat mengambil data tanah', [
-                'error' => $e->getMessage(),
-                'stack' => $e->getTraceAsString()
-            ]);
-            return response()->json([
-                "status" => "error",
-                "message" => "Terjadi kesalahan saat mengambil data",
-                "error" => $e->getMessage()
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        if (!$user) {
+            return response()->json(["status" => "error", "message" => "User tidak terautentikasi"], 401);
         }
-    }
 
+        $rolePimpinanJamaah = '326f0dde-2851-4e47-ac5a-de6923447317';
+        $rolePimpinanCabang = '3594bece-a684-4287-b0a2-7429199772a3';
+        $roleBidgarWakaf = '26b2b64e-9ae3-4e2e-9063-590b1bb00480';
+
+        // Query dasar dengan eager loading jika ada relasi
+        $query = Tanah::query();
+
+        if ($user->role_id === $rolePimpinanJamaah) {
+            // MODIFIKASI DI SINI: Filter ketat berdasarkan user_id
+            $query->where('user_id', $user->id)
+                  ->where('NamaPimpinanJamaah', $user->name); // Tambahan filter untuk memastikan
+        } 
+        elseif ($user->role_id === $rolePimpinanCabang || $user->role_id === $roleBidgarWakaf) {
+            $query->where('status', 'disetujui');
+        } 
+        else {
+            return response()->json(["status" => "error", "message" => "Akses ditolak"], 403);
+        }
+
+        // Eksekusi query
+        $tanah = $query->get();
+
+        return response()->json([
+            "status" => "success",
+            "message" => "Data tanah berhasil diambil",
+            "data" => $tanah
+        ], 200);
+
+    } catch (\Exception $e) {
+        Log::error('Error mengambil data tanah: ' . $e->getMessage());
+        return response()->json([
+            "status" => "error",
+            "message" => "Terjadi kesalahan server"
+        ], 500);
+    }
+}
 
     // GET: Ambil data tanah berdasarkan ID
     public function show($id)
