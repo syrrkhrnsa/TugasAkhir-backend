@@ -23,13 +23,15 @@ class Tanah extends Model
         'luasTanah',
         'legalitas',
         'status',
-        'user_id'
+        'id_sertifikat',
+        'user_id' // Menambahkan kolom user_id
     ];
     
-    // Changed to hasMany since one tanah can have many sertifikats
-    public function sertifikats()
+
+    // Relasi dengan Sertifikat
+    public function sertifikat()
     {
-        return $this->hasMany(Sertifikat::class, 'id_tanah', 'id_tanah');
+        return $this->belongsTo(Sertifikat::class, 'id_sertifikat', 'id_sertifikat');
     }
 
     // Relasi dengan User

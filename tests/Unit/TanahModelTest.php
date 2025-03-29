@@ -30,6 +30,7 @@ class TanahModelTest extends TestCase
             'luasTanah',
             'legalitas',
             'status',
+            'id_sertifikat',
             'user_id',
         ];
         $this->assertEquals($fillable, $this->tanah->getFillable());
@@ -53,9 +54,8 @@ class TanahModelTest extends TestCase
     public function testSertifikatRelationship()
     {
         $relation = $this->tanah->sertifikat();
-        $this->assertInstanceOf(\Illuminate\Database\Eloquent\Relations\HasOne::class, $relation);
-        $this->assertEquals('tanah_id', $relation->getForeignKeyName());
-        $this->assertEquals('id_tanah', $relation->getLocalKeyName());
+        $this->assertInstanceOf(BelongsTo::class, $relation);
+        $this->assertEquals('id_sertifikat', $relation->getForeignKeyName());
         $this->assertInstanceOf(Sertifikat::class, $relation->getRelated());
     }
 

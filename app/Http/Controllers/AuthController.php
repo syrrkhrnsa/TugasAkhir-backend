@@ -17,7 +17,6 @@ class AuthController extends Controller
         $fields = $request->validate([
             'name' => 'required|string',
             'email' => 'required|string|unique:users,email',
-            'username' => 'required|string|unique:users,username',
             'password' => 'required|string|confirmed',
             'role_id' => 'required|exists:roles,id' // Ensure the role exists
         ]);
@@ -26,7 +25,6 @@ class AuthController extends Controller
         $user = User::create([
             'name' => $fields['name'],
             'email' => $fields['email'],
-            'username' => $fields['username'],
             'password' => bcrypt($fields['password']),
             'role_id' => $fields['role_id'] // Add role to user
         ]);
@@ -71,7 +69,6 @@ class AuthController extends Controller
     $response = [
         'user' => [
             'id' => $user->id,
-            'username' => $user->username,
             'name' => $user->name,
             'email' => $user->email,
             'role' => $user->role, // Menyertakan role dalam response
