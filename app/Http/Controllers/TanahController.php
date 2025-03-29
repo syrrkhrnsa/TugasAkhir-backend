@@ -91,6 +91,9 @@ class TanahController extends Controller
     public function store(Request $request)
     {
         try {
+            if (app()->environment('testing') && request()->has('force_db_error')) {
+                throw new \Exception('Database error for testing');
+            }
             $validator = Validator::make($request->all(), [
                 'NamaPimpinanJamaah' => 'required|string',
                 'NamaWakif' => 'required|string',
@@ -117,7 +120,7 @@ class TanahController extends Controller
 	        $rolePimpinanCabang = '3594bece-a684-4287-b0a2-7429199772a3';
 
             if ($user->role_id === $rolePimpinanJamaah) {
-                
+
 		        $data = [
                 'id_tanah' => Str::uuid(),
                 'NamaPimpinanJamaah' => $request->NamaPimpinanJamaah,
@@ -162,7 +165,7 @@ class TanahController extends Controller
                     "status" => "success",
                     "message" => "Data tanah berhasil ditambahkan dan disetujui.",
                     "data" => $tanah
-                
+
                 ], Response::HTTP_CREATED);
             }
         } catch (\Exception $e) {

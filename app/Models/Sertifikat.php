@@ -21,6 +21,7 @@ class Sertifikat extends Model
         'dokumen',
         'jenis_sertifikat',
         'status_pengajuan',
+        'tanggal_pengajuan',
         'status',
         'user_id',
         'id_tanah'
