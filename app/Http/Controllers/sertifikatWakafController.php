@@ -73,44 +73,47 @@ class SertifikatWakafController extends Controller
     }
 
     public function showLegalitas($id_tanah)
-    {
+{
+    try {
+        if (app()->environment('testing') && request()->has('force_db_error')) {
+            throw new \Exception('Database error for testing');
+        }
 
-        try {
-            if (app()->environment('testing') && request()->has('force_db_error')) {
-                throw new \Exception('Database error for testing');
-            }
+        // Cari semua sertifikat berdasarkan id_tanah
+        $sertifikats = Sertifikat::where('id_tanah', $id_tanah)->get();
 
-            // Cari sertifikat berdasarkan id_tanah
-            $sertifikat = Sertifikat::where('id_tanah', $id_tanah)->first();
-
-            // Jika data tidak ditemukan
-            if (!$sertifikat) {
-                return response()->json([
-                    "status" => "error",
-                    "message" => "Data sertifikat untuk tanah ini tidak ditemukan"
-                ], Response::HTTP_NOT_FOUND);
-            }
-
-            // Ambil data legalitas
-            $legalitas = $sertifikat->jenis_sertifikat;
-
-            return response()->json([
-                "status" => "success",
-                "message" => "Data legalitas berhasil diambil",
-                "data" => [
-                    "id_tanah" => $sertifikat->id_tanah,
-                    "id_sertifikat" => $sertifikat->id_sertifikat,
-                    "legalitas" => $legalitas
-                ]
-            ], Response::HTTP_OK);
-        } catch (\Exception $e) {
+        // Jika data tidak ditemukan
+        if ($sertifikats->isEmpty()) {
             return response()->json([
                 "status" => "error",
-                "message" => "Terjadi kesalahan saat mengambil data legalitas",
-                "error" => $e->getMessage()
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+                "message" => "Data sertifikat untuk tanah ini tidak ditemukan"
+            ], Response::HTTP_NOT_FOUND);
         }
+
+        // Format data untuk response
+        $legalitasData = $sertifikats->map(function ($sertifikat) {
+            return [
+                "id_sertifikat" => $sertifikat->id_sertifikat,
+                "jenis_sertifikat" => $sertifikat->jenis_sertifikat
+            ];
+        });
+
+        return response()->json([
+            "status" => "success",
+            "message" => "Data legalitas berhasil diambil",
+            "data" => [
+                "id_tanah" => $id_tanah,
+                "legalitas" => $legalitasData
+            ]
+        ], Response::HTTP_OK);
+    } catch (\Exception $e) {
+        return response()->json([
+            "status" => "error",
+            "message" => "Terjadi kesalahan saat mengambil data legalitas",
+            "error" => $e->getMessage()
+        ], Response::HTTP_INTERNAL_SERVER_ERROR);
     }
+}
 
     // Menampilkan data sertifikat berdasarkan role pengguna
     public function index()
@@ -424,6 +427,11 @@ class SertifikatWakafController extends Controller
     public function updateStatusPengajuan(Request $request, $id)
     {
         try {
+            $user = Auth::user();
+            if (!$user) {
+                return response()->json(["status" => "error", "message" => "User tidak terautentikasi"], Response::HTTP_UNAUTHORIZED);
+            }
+
             $validator = Validator::make($request->all(), [
                 'status_pengajuan' => 'nullable|string',
             ]);
@@ -436,21 +444,6 @@ class SertifikatWakafController extends Controller
                 ], Response::HTTP_BAD_REQUEST);
             }
 
-            $user = Auth::user();
-            if (!$user) {
-                return response()->json(["status" => "error", "message" => "User tidak terautentikasi"], Response::HTTP_UNAUTHORIZED);
-            }
-
-            // ID role untuk validasi
-            $roleBidgarWakaf = '26b2b64e-9ae3-4e2e-9063-590b1bb00480';
-            
-            // Hanya Bidgar Wakaf yang bisa update status pengajuan
-            if ($user->role_id !== $roleBidgarWakaf) {
-                return response()->json([
-                    "status" => "error",
-                    "message" => "Anda tidak memiliki izin untuk mengubah status pengajuan"
-                ], Response::HTTP_FORBIDDEN);
-            }
 
             $sertifikat = Sertifikat::find($id);
             if (!$sertifikat) {
@@ -459,11 +452,6 @@ class SertifikatWakafController extends Controller
 
             // Update hanya field status_pengajuan
             $sertifikat->status_pengajuan = $request->status_pengajuan;
-            
-            // Jika status pengajuan disetujui, update juga status utama
-            if ($request->status_pengajuan === 'disetujui') {
-                $sertifikat->status = 'aktif';
-            }
             
             $sertifikat->save();
 
@@ -483,38 +471,38 @@ class SertifikatWakafController extends Controller
     }
 
     /**
- * Remove the specified resource from storage.
- */
-public function destroy($id)
-{
-    try {
-        $sertifikat = Sertifikat::find($id);
-        
-        if (!$sertifikat) {
+     * Remove the specified resource from storage.
+     */
+    public function destroy($id)
+    {
+        try {
+            $sertifikat = Sertifikat::find($id);
+            
+            if (!$sertifikat) {
+                return response()->json([
+                    "status" => "error",
+                    "message" => "Data tidak ditemukan"
+                ], Response::HTTP_NOT_FOUND);
+            }
+
+            // Delete associated file if exists
+            if ($sertifikat->dokumen) {
+                Storage::disk('public')->delete($sertifikat->dokumen);
+            }
+
+            $sertifikat->delete();
+
+            return response()->json([
+                "status" => "success",
+                "message" => "Data berhasil dihapus"
+            ], Response::HTTP_OK);
+
+        } catch (\Exception $e) {
+            Log::error('Error deleting sertifikat: ' . $e->getMessage());
             return response()->json([
                 "status" => "error",
-                "message" => "Data tidak ditemukan"
-            ], Response::HTTP_NOT_FOUND);
+                "message" => "Terjadi kesalahan saat menghapus data"
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
-
-        // Delete associated file if exists
-        if ($sertifikat->dokumen) {
-            Storage::disk('public')->delete($sertifikat->dokumen);
-        }
-
-        $sertifikat->delete();
-
-        return response()->json([
-            "status" => "success",
-            "message" => "Data berhasil dihapus"
-        ], Response::HTTP_OK);
-
-    } catch (\Exception $e) {
-        Log::error('Error deleting sertifikat: ' . $e->getMessage());
-        return response()->json([
-            "status" => "error",
-            "message" => "Terjadi kesalahan saat menghapus data"
-        ], Response::HTTP_INTERNAL_SERVER_ERROR);
     }
-}
 }
