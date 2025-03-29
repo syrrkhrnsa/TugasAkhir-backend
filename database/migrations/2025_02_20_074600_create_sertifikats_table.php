@@ -13,6 +13,7 @@ return new class extends Migration {
             $table->string('dokumen')->nullable();
             $table->string('jenis_sertifikat')->nullable();
             $table->string('status_pengajuan')->nullable();
+            $table->date('tanggal_pengajuan');
             $table->string('status');
             $table->uuid('user_id');
             $table->uuid('id_tanah');

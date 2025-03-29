@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Storage;
 
 
 class SertifikatWakafController extends Controller
@@ -41,7 +42,23 @@ class SertifikatWakafController extends Controller
 
             // Cari sertifikat berdasarkan id_tanah
             $sertifikat = Sertifikat::where('id_tanah', $id_tanah)->get(); // Ubah ke get()
+    {
 
+        try {
+            if (app()->environment('testing') && request()->has('force_db_error')) {
+                throw new \Exception('Database error for testing');
+            }
+
+            // Cari sertifikat berdasarkan id_tanah
+            $sertifikat = Sertifikat::where('id_tanah', $id_tanah)->get(); // Ubah ke get()
+
+            // Jika data tidak ditemukan
+            if ($sertifikat->isEmpty()) {
+                return response()->json([
+                    "status" => "error",
+                    "message" => "Data sertifikat untuk tanah ini tidak ditemukan"
+                ], Response::HTTP_NOT_FOUND);
+            }
             // Jika data tidak ditemukan
             if ($sertifikat->isEmpty()) {
                 return response()->json([
@@ -62,7 +79,26 @@ class SertifikatWakafController extends Controller
                 'error' => $e->getMessage(),
                 'stack' => $e->getTraceAsString()
             ]);
+            // Jika data ditemukan, kembalikan respons JSON
+            return response()->json([
+                "status" => "success",
+                "message" => "Data sertifikat berhasil diambil",
+                "data" => $sertifikat // Ini akan mengembalikan array
+            ], Response::HTTP_OK);
+        } catch (\Exception $e) {
+            // Log error jika terjadi kesalahan
+            Log::error('Terjadi kesalahan saat mengambil data sertifikat', [
+                'error' => $e->getMessage(),
+                'stack' => $e->getTraceAsString()
+            ]);
 
+            return response()->json([
+                "status" => "error",
+                "message" => "Terjadi kesalahan saat mengambil data sertifikat",
+                "error" => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
             return response()->json([
                 "status" => "error",
                 "message" => "Terjadi kesalahan saat mengambil data sertifikat",
@@ -74,7 +110,12 @@ class SertifikatWakafController extends Controller
     public function showLegalitas($id_tanah)
     {
 
+
         try {
+            if (app()->environment('testing') && request()->has('force_db_error')) {
+                throw new \Exception('Database error for testing');
+            }
+
             if (app()->environment('testing') && request()->has('force_db_error')) {
                 throw new \Exception('Database error for testing');
             }
@@ -91,6 +132,7 @@ class SertifikatWakafController extends Controller
             }
 
             // Ambil data legalitas
+            $legalitas = $sertifikat->jenis_sertifikat;
             $legalitas = $sertifikat->jenis_sertifikat;
 
             return response()->json([
@@ -115,7 +157,11 @@ class SertifikatWakafController extends Controller
     public function index()
     {
 
+
         try {
+            if (app()->environment('testing') && request()->has('force_db_error')) {
+                throw new \Exception('Database error for testing');
+            }
             if (app()->environment('testing') && request()->has('force_db_error')) {
                 throw new \Exception('Database error for testing');
             }
@@ -165,11 +211,20 @@ class SertifikatWakafController extends Controller
     {
         // Ambil data sertifikat berdasarkan ID
         $sertifikat = Sertifikat::find($id);
+    {
+        // Ambil data sertifikat berdasarkan ID
+        $sertifikat = Sertifikat::find($id);
 
         if (!$sertifikat) {
             return response()->json(['message' => 'Sertifikat tidak ditemukan'], 404);
         }
+        if (!$sertifikat) {
+            return response()->json(['message' => 'Sertifikat tidak ditemukan'], 404);
+        }
 
+        // Kembalikan data sertifikat sebagai response JSON
+        return response()->json($sertifikat);
+    }
         // Kembalikan data sertifikat sebagai response JSON
         return response()->json($sertifikat);
     }
@@ -193,12 +248,27 @@ class SertifikatWakafController extends Controller
                     "errors" => $validator->errors()
                 ], Response::HTTP_BAD_REQUEST);
             }
+            if ($validator->fails()) {
+                return response()->json([
+                    "status" => "error",
+                    "message" => "Validasi gagal",
+                    "errors" => $validator->errors()
+                ], Response::HTTP_BAD_REQUEST);
+            }
 
             $user = Auth::user();
             if (!$user) {
                 return response()->json(["status" => "error", "message" => "User tidak terautentikasi"], Response::HTTP_UNAUTHORIZED);
             }
+            $user = Auth::user();
+            if (!$user) {
+                return response()->json(["status" => "error", "message" => "User tidak terautentikasi"], Response::HTTP_UNAUTHORIZED);
+            }
 
+            // ID role
+            $rolePimpinanJamaah = '326f0dde-2851-4e47-ac5a-de6923447317';
+            $rolePimpinanCabang = '3594bece-a684-4287-b0a2-7429199772a3';
+            $roleBidgarWakaf = '26b2b64e-9ae3-4e2e-9063-590b1bb00480';
             // ID role
             $rolePimpinanJamaah = '326f0dde-2851-4e47-ac5a-de6923447317';
             $rolePimpinanCabang = '3594bece-a684-4287-b0a2-7429199772a3';
@@ -225,7 +295,19 @@ class SertifikatWakafController extends Controller
                     'data' => json_encode($data),
                     'status' => 'ditinjau',
                 ]);
+                $approval = Approval::create([
+                    'user_id' => $user->id,
+                    'type' => 'sertifikat',
+                    'data_id' => $data['id_sertifikat'],
+                    'data' => json_encode($data),
+                    'status' => 'ditinjau',
+                ]);
 
+                // Kirim notifikasi ke Bidgar Wakaf
+                $bidgarWakaf = User::where('role_id', $roleBidgarWakaf)->get();
+                foreach ($bidgarWakaf as $bidgar) {
+                    $bidgar->notify(new ApprovalNotification($approval, 'create', 'bidgar')); // Tambahkan 'bidgar' sebagai recipient
+                }
                 // Kirim notifikasi ke Bidgar Wakaf
                 $bidgarWakaf = User::where('role_id', $roleBidgarWakaf)->get();
                 foreach ($bidgarWakaf as $bidgar) {
@@ -263,7 +345,29 @@ class SertifikatWakafController extends Controller
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
+                return response()->json([
+                    "status" => "success",
+                    "message" => "Data sertifikat berhasil ditambahkan dan disetujui.",
+                    "data" => $sertifikat
+                ], Response::HTTP_CREATED);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                "status" => "error",
+                "message" => "Terjadi kesalahan saat menyimpan data",
+                "error" => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
 
+    public function update(Request $request, $id)
+    {
+        try {
+
+            $user = Auth::user();
+            if (!$user) {
+                return response()->json(["status" => "error", "message" => "User tidak terautentikasi"], 401);
+            }
     public function update(Request $request, $id)
     {
         try {
@@ -276,7 +380,17 @@ class SertifikatWakafController extends Controller
             // ID role
             $rolePimpinanJamaah = '326f0dde-2851-4e47-ac5a-de6923447317';
             $roleBidgarWakaf = '26b2b64e-9ae3-4e2e-9063-590b1bb00480';
+            // ID role
+            $rolePimpinanJamaah = '326f0dde-2851-4e47-ac5a-de6923447317';
+            $roleBidgarWakaf = '26b2b64e-9ae3-4e2e-9063-590b1bb00480';
 
+            // Validasi role
+            if (!in_array($user->role_id, [$rolePimpinanJamaah, $roleBidgarWakaf])) {
+                return response()->json([
+                    "status" => "error",
+                    "message" => "Anda tidak memiliki izin untuk melakukan pembaruan"
+                ], 403);
+            }
             // Validasi role
             if (!in_array($user->role_id, [$rolePimpinanJamaah, $roleBidgarWakaf])) {
                 return response()->json([
@@ -287,7 +401,18 @@ class SertifikatWakafController extends Controller
 
             // Cek data sertifikat
             $sertifikat = Sertifikat::findOrFail($id);
+            // Cek data sertifikat
+            $sertifikat = Sertifikat::findOrFail($id);
 
+            // Validasi request
+            $validator = Validator::make($request->all(), [
+                'noDokumenBastw' => 'nullable|string|unique:sertifikats,noDokumenBastw,' . $id . ',id_sertifikat',
+                'noDokumenAIW'   => 'nullable|string|unique:sertifikats,noDokumenAIW,' . $id . ',id_sertifikat',
+                'noDokumenSW'    => 'nullable|string|unique:sertifikats,noDokumenSW,' . $id . ',id_sertifikat',
+                'dokBastw'       => 'nullable|file|mimes:pdf|max:2048',
+                'dokAiw'         => 'nullable|file|mimes:pdf|max:2048',
+                'dokSw'          => 'nullable|file|mimes:pdf|max:2048',
+            ]);
             // Validasi request
             $validator = Validator::make($request->all(), [
                 'noDokumenBastw' => 'nullable|string|unique:sertifikats,noDokumenBastw,' . $id . ',id_sertifikat',
@@ -305,10 +430,26 @@ class SertifikatWakafController extends Controller
                     "errors" => $validator->errors()
                 ], 400);
             }
+            if ($validator->fails()) {
+                return response()->json([
+                    "status" => "error",
+                    "message" => "Validasi gagal",
+                    "errors" => $validator->errors()
+                ], 400);
+            }
 
             $updateData = [];
             $fileChanges = [];
+            $updateData = [];
+            $fileChanges = [];
 
+            // Handle text inputs
+            $textFields = ['noDokumenBastw', 'noDokumenAIW', 'noDokumenSW'];
+            foreach ($textFields as $field) {
+                if ($request->has($field)) {
+                    $updateData[$field] = $request->input($field);
+                }
+            }
             // Handle text inputs
             $textFields = ['noDokumenBastw', 'noDokumenAIW', 'noDokumenSW'];
             foreach ($textFields as $field) {
@@ -332,6 +473,21 @@ class SertifikatWakafController extends Controller
                     $fileChanges[$field] = $path;
                 }
             }
+            // Handle file uploads
+            $fileFields = ['dokBastw', 'dokAiw', 'dokSw'];
+            foreach ($fileFields as $field) {
+                if ($request->hasFile($field)) {
+                    // Hapus file lama jika ada
+                    if ($sertifikat->$field) {
+                        Storage::disk('public')->delete($sertifikat->$field);
+                    }
+
+                    // Simpan file baru
+                    $path = $request->file($field)->store('dokumen', 'public');
+                    $updateData[$field] = $path;
+                    $fileChanges[$field] = $path;
+                }
+            }
 
             // Jika tidak ada data yang diupdate
             if (empty($updateData)) {
@@ -340,7 +496,22 @@ class SertifikatWakafController extends Controller
                     "message" => "Tidak ada data yang diperbarui"
                 ], 400);
             }
+            // Jika tidak ada data yang diupdate
+            if (empty($updateData)) {
+                return response()->json([
+                    "status" => "error",
+                    "message" => "Tidak ada data yang diperbarui"
+                ], 400);
+            }
 
+            // Jika user Pimpinan Jamaah, buat approval
+            if ($user->role_id === $rolePimpinanJamaah) {
+                $previousData = $sertifikat->toArray();
+
+                // Simpan perubahan sementara
+                $sertifikat->fill($updateData);
+                $sertifikat->status = 'ditinjau';
+                $sertifikat->save();
             // Jika user Pimpinan Jamaah, buat approval
             if ($user->role_id === $rolePimpinanJamaah) {
                 $previousData = $sertifikat->toArray();
@@ -362,13 +533,39 @@ class SertifikatWakafController extends Controller
                         'id_sertifikat' => $sertifikat->id_sertifikat
                     ]),
                 ]);
+                $approval = Approval::create([
+                    'user_id' => $user->id,
+                    'type' => 'sertifikat_update',
+                    'data_id' => $sertifikat->id_sertifikat,
+                    'status' => 'ditinjau',
+                    'data' => json_encode([
+                        'previous_data' => $previousData,
+                        'updated_data' => $updateData,
+                        'file_changes' => $fileChanges,
+                        'id_sertifikat' => $sertifikat->id_sertifikat
+                    ]),
+                ]);
 
                 // Kirim notifikasi ke Bidgar Wakaf
                 $bidgarUsers = User::where('role_id', $roleBidgarWakaf)->get();
                 foreach ($bidgarUsers as $bidgar) {
                     $bidgar->notify(new ApprovalNotification($approval, 'update', 'bidgar'));
                 }
+                // Kirim notifikasi ke Bidgar Wakaf
+                $bidgarUsers = User::where('role_id', $roleBidgarWakaf)->get();
+                foreach ($bidgarUsers as $bidgar) {
+                    $bidgar->notify(new ApprovalNotification($approval, 'update', 'bidgar'));
+                }
 
+                return response()->json([
+                    "status" => "success",
+                    "message" => "Permintaan pembaruan telah dikirim ke Bidgar Wakaf untuk ditinjau.",
+                    "approval_id" => $approval->id
+                ], 201);
+            }
+
+            // Jika user Bidgar Wakaf, langsung update
+            $sertifikat->update($updateData);
                 return response()->json([
                     "status" => "success",
                     "message" => "Permintaan pembaruan telah dikirim ke Bidgar Wakaf untuk ditinjau.",
@@ -385,6 +582,12 @@ class SertifikatWakafController extends Controller
                 "data" => $sertifikat,
                 "file_paths" => $fileChanges
             ], 200);
+            return response()->json([
+                "status" => "success",
+                "message" => "Data sertifikat berhasil diperbarui.",
+                "data" => $sertifikat,
+                "file_paths" => $fileChanges
+            ], 200);
 
         } catch (\Exception $e) {
             Log::error('Error in update sertifikat: ' . $e->getMessage());
@@ -395,7 +598,17 @@ class SertifikatWakafController extends Controller
             ], 500);
         }
     }
+        } catch (\Exception $e) {
+            Log::error('Error in update sertifikat: ' . $e->getMessage());
+            return response()->json([
+                "status" => "error",
+                "message" => "Terjadi kesalahan saat memperbarui data",
+                "error" => $e->getMessage()
+            ], 500);
+        }
+    }
 
+    public function updateJenisSertifikat(Request $request, $id)
     public function updateJenisSertifikat(Request $request, $id)
     {
         try {
@@ -484,6 +697,69 @@ class SertifikatWakafController extends Controller
                 $sertifikat->status = 'aktif';
             }
             
+            // Update hanya field jenis_sertifikat
+            $sertifikat->jenis_sertifikat = $request->jenis_sertifikat;
+            $sertifikat->save();
+
+            return response()->json([
+                "status" => "success",
+                "message" => "Jenis sertifikat berhasil diperbarui.",
+                "data" => $sertifikat
+            ], Response::HTTP_OK);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                "status" => "error",
+                "message" => "Terjadi kesalahan saat memperbarui jenis sertifikat",
+                "error" => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function updateStatusPengajuan(Request $request, $id)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'status_pengajuan' => 'nullable|string',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    "status" => "error",
+                    "message" => "Validasi gagal",
+                    "errors" => $validator->errors()
+                ], Response::HTTP_BAD_REQUEST);
+            }
+
+            $user = Auth::user();
+            if (!$user) {
+                return response()->json(["status" => "error", "message" => "User tidak terautentikasi"], Response::HTTP_UNAUTHORIZED);
+            }
+
+            // ID role untuk validasi
+            $roleBidgarWakaf = '26b2b64e-9ae3-4e2e-9063-590b1bb00480';
+            
+            // Hanya Bidgar Wakaf yang bisa update status pengajuan
+            if ($user->role_id !== $roleBidgarWakaf) {
+                return response()->json([
+                    "status" => "error",
+                    "message" => "Anda tidak memiliki izin untuk mengubah status pengajuan"
+                ], Response::HTTP_FORBIDDEN);
+            }
+
+            $sertifikat = Sertifikat::find($id);
+            if (!$sertifikat) {
+                return response()->json(["status" => "error", "message" => "Data tidak ditemukan"], Response::HTTP_NOT_FOUND);
+            }
+
+            // Update hanya field status_pengajuan
+            $sertifikat->status_pengajuan = $request->status_pengajuan;
+            
+            // Jika status pengajuan disetujui, update juga status utama
+            if ($request->status_pengajuan === 'disetujui') {
+                $sertifikat->status = 'aktif';
+            }
+            
             $sertifikat->save();
 
             return response()->json([
@@ -495,6 +771,7 @@ class SertifikatWakafController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 "status" => "error",
+                "message" => "Terjadi kesalahan saat memperbarui status pengajuan",
                 "message" => "Terjadi kesalahan saat memperbarui status pengajuan",
                 "error" => $e->getMessage()
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
