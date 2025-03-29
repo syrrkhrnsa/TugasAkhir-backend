@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Tanah;
+use App\Models\Sertifikat;
 use App\Models\Approval;
 use App\Notifications\ApprovalNotification;
 use App\Models\User;
@@ -13,34 +14,20 @@ use Ramsey\Uuid\Uuid;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use App\Models\Sertifikat;
 use Illuminate\Support\Facades\DB;
 
 class TanahController extends Controller
 {
-    
+
     public function publicIndex()
     {
-        try {
-            // Ambil hanya data dengan status "disetujui"
-            $tanah = Tanah::where('status', 'disetujui')->get();
+        $tanah = Tanah::where('status', 'disetujui')->get();
 
-            return response()->json([
-                "status" => "success",
-                "message" => "Data tanah berhasil diambil",
-                "data" => $tanah
-            ], Response::HTTP_OK);
-        } catch (\Exception $e) {
-            Log::error('Terjadi kesalahan saat mengambil data tanah untuk publik', [
-                'error' => $e->getMessage(),
-                'stack' => $e->getTraceAsString()
-            ]);
-            return response()->json([
-                "status" => "error",
-                "message" => "Terjadi kesalahan saat mengambil data",
-                "error" => $e->getMessage()
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
+        return response()->json([
+            "status" => "success",
+            "message" => "Data tanah berhasil diambil",
+            "data" => $tanah
+        ], Response::HTTP_OK);
     }
 
     public function index()
@@ -102,113 +89,94 @@ class TanahController extends Controller
 
     // POST: Tambah data tanah baru
     public function store(Request $request)
-{
-    try {
-        $validator = Validator::make($request->all(), [
-            'NamaPimpinanJamaah' => 'required|string',
-            'NamaWakif' => 'required|string',
-            'lokasi' => 'required|string',
-            'luasTanah' => 'required|string',
-            'noDokumenBastw' => 'nullable|string|unique:sertifikats',
-            'noDokumenAIW' => 'nullable|string|unique:sertifikats',
-            'noDokumenSW' => 'nullable|string|unique:sertifikats',
-            'dokBastw' => 'nullable|string',
-            'dokAiw' => 'nullable|string',
-            'dokSw' => 'nullable|string',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                "status" => "error",
-                "message" => "Validasi gagal",
-                "errors" => $validator->errors()
-            ], Response::HTTP_BAD_REQUEST);
-        }
-
-        $user = Auth::user();
-        if (!$user) {
-            return response()->json(["status" => "error", "message" => "User tidak terautentikasi"], Response::HTTP_UNAUTHORIZED);
-        }
-
-        // ID role
-        $rolePimpinanJamaah = '326f0dde-2851-4e47-ac5a-de6923447317';
-        $rolePimpinanCabang = '3594bece-a684-4287-b0a2-7429199772a3';
-        $roleBidgarWakaf = '26b2b64e-9ae3-4e2e-9063-590b1bb00480';
-
-        $id_tanah = Str::uuid();
-        $id_sertifikat = Str::uuid();
-
-        $dataTanah = [
-            'id_tanah' => $id_tanah,
-            'NamaPimpinanJamaah' => $request->NamaPimpinanJamaah,
-            'NamaWakif' => $request->NamaWakif,
-            'lokasi' => $request->lokasi,
-            'luasTanah' => $request->luasTanah,
-            'legalitas' => 'N/A',
-        ];
-
-        $dataSertifikat = [
-            'id_sertifikat' => $id_sertifikat,
-            'id_tanah' => $id_tanah,
-            'noDokumenBastw' => $request->noDokumenBastw,
-            'noDokumenAIW' => $request->noDokumenAIW,
-            'noDokumenSW' => $request->noDokumenSW,
-            'legalitas' => 'N/A',
-            'dokBastw' => $request->dokBastw,
-            'dokAiw' => $request->dokAiw,
-            'dokSw' => $request->dokSw,
-        ];
-
-        if ($user->role_id === $rolePimpinanJamaah) {
-            // Jika Pimpinan Jamaah, data disimpan ke tabel Approval
-            $approval = Approval::create([
-                'user_id' => $user->id,
-                'type' => 'tanah_dan_sertifikat',
-                'data_id' => Str::uuid(),
-                'data' => json_encode([
-                    'tanah' => $dataTanah,
-                    'sertifikat' => $dataSertifikat,
-                ]),
-                'status' => 'ditinjau',
+    {
+        try {
+            if (app()->environment('testing') && request()->has('force_db_error')) {
+                throw new \Exception('Database error for testing');
+            }
+            $validator = Validator::make($request->all(), [
+                'NamaPimpinanJamaah' => 'required|string',
+                'NamaWakif' => 'required|string',
+                'lokasi' => 'required|string',
+                'luasTanah' => 'required|string',
             ]);
 
-            // Kirim notifikasi ke Bidgar Wakaf
-            $bidgarWakaf = User::where('role_id', $roleBidgarWakaf)->get();
-            foreach ($bidgarWakaf as $bidgar) {
-                $bidgar->notify(new ApprovalNotification($approval, 'create', 'bidgar'));
+            if ($validator->fails()) {
+                return response()->json([
+                    "status" => "error",
+                    "message" => "Validasi gagal",
+                    "errors" => $validator->errors()
+                ], Response::HTTP_BAD_REQUEST);
             }
 
-            return response()->json([
-                "status" => "success",
-                "message" => "Permintaan telah dikirim ke Bidgar Wakaf untuk ditinjau.",
-            ], Response::HTTP_CREATED);
-        } else {
-            // Jika Pimpinan Cabang atau Bidgar Wakaf, langsung simpan ke tabel Tanah dan Sertifikat
-            $tanah = null;
-            $sertifikat = null;
+            $user = Auth::user();
+            if (!$user) {
+                return response()->json(["status" => "error", "message" => "User tidak terautentikasi"], Response::HTTP_UNAUTHORIZED);
+            }
 
-            DB::transaction(function () use ($dataTanah, $dataSertifikat, $user, &$tanah, &$sertifikat) {
-                $tanah = Tanah::create(array_merge($dataTanah, ['status' => 'disetujui', 'user_id' => $user->id]));
-                $sertifikat = Sertifikat::create(array_merge($dataSertifikat, ['status' => 'disetujui', 'user_id' => $user->id]));
-            });
+            // ID role
+            $rolePimpinanJamaah = '326f0dde-2851-4e47-ac5a-de6923447317';
+            $roleBidgarWakaf = '26b2b64e-9ae3-4e2e-9063-590b1bb00480';
+	        $rolePimpinanCabang = '3594bece-a684-4287-b0a2-7429199772a3';
 
+            if ($user->role_id === $rolePimpinanJamaah) {
+
+		        $data = [
+                'id_tanah' => Str::uuid(),
+                'NamaPimpinanJamaah' => $request->NamaPimpinanJamaah,
+                'NamaWakif' => $request->NamaWakif,
+                'lokasi' => $request->lokasi,
+                'luasTanah' => $request->luasTanah,
+                'legalitas' => '-',
+                ];
+
+                $approval = Approval::create([
+                'user_id' => $user->id,
+                'type' => 'tanah',
+                'data_id' => Str::uuid(),
+                'data' => json_encode($data),
+                'status' => 'ditinjau',
+             ]);
+
+                // Kirim notifikasi ke Bidgar Wakaf
+                $bidgarWakaf = User::where('role_id', $roleBidgarWakaf)->get();
+                foreach ($bidgarWakaf as $bidgar) {
+                    $bidgar->notify(new ApprovalNotification($approval, 'create', 'bidgar'));
+                }
+
+                return response()->json([
+                    "status" => "success",
+                    "message" => "Permintaan telah dikirim ke Bidgar Wakaf untuk ditinjau.",
+                ], Response::HTTP_CREATED);
+            } else {
+                // Jika Pimpinan Cabang atau Bidgar Wakaf, langsung simpan ke tabel Tanah dan Sertifikat
+                $tanah = Tanah::create([
+                 'id_tanah' => Str::uuid(),
+                 'NamaPimpinanJamaah' => $request->NamaPimpinanJamaah,
+                 'NamaWakif' => $request->NamaWakif,
+                 'lokasi' => $request->lokasi,
+                 'luasTanah' => $request->luasTanah,
+                 'legalitas' => '-',
+                 'status' => 'disetujui',
+                 'user_id' => $user->id,
+             ]);
+
+                return response()->json([
+                    "status" => "success",
+                    "message" => "Data tanah berhasil ditambahkan dan disetujui.",
+                    "data" => $tanah
+
+                ], Response::HTTP_CREATED);
+            }
+        } catch (\Exception $e) {
             return response()->json([
-                "status" => "success",
-                "message" => "Data tanah dan sertifikat berhasil ditambahkan dan disetujui.",
-                "data" => [
-                    'tanah' => $tanah,
-                    'sertifikat' => $sertifikat,
-                ]
-            ], Response::HTTP_CREATED);
+                "status" => "error",
+                "message" => "Terjadi kesalahan saat menyimpan data",
+                "error" => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
-    } catch (\Exception $e) {
-        return response()->json([
-            "status" => "error",
-            "message" => "Terjadi kesalahan saat menyimpan data",
-            "error" => $e->getMessage()
-        ], Response::HTTP_INTERNAL_SERVER_ERROR);
     }
-}
+
     // PUT: Update data tanah
     public function update(Request $request, $id)
     {
