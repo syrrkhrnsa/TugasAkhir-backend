@@ -57,6 +57,8 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::delete('/sertifikat/{id}', [sertifikatWakafController::class, 'destroy']);
     Route::get('/sertifikat/legalitas/{id}', [sertifikatWakafController::class, 'showLegalitas']);
     Route::get('/sertifikat/tanah/{id_tanah}', [sertifikatWakafController::class, 'getSertifikatByIdTanah']);
+
+    
     Route::get('/approvals', [ApprovalController::class, 'index']);
     Route::get('/approvals/{id}', [ApprovalController::class, 'show']);
     Route::post('/approvals/{id}/approve', [ApprovalController::class, 'approve']);
