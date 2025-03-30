@@ -88,6 +88,8 @@ class ApprovalController extends Controller
             return response()->json(["status" => "error", "message" => "Data tidak valid"], 400);
         }
 
+        $approval->update(['status' => 'disetujui', 'approver_id' => $user->id]);
+
         // Cek tipe approval
         if ($approval->type === 'tanah') {
             // Jika tipe approval adalah tanah, simpan data ke tabel Tanah
@@ -99,12 +101,11 @@ class ApprovalController extends Controller
             return response()->json(["status" => "error", "message" => "Tipe approval tidak valid"], 400);
         }
 
-        return response()->json(["status" => "success", "message" => "Permintaan disetujui"], 200);
-    
-        // Update status persetujuan
-        $approval->update(['status' => 'disetujui', 'approver_id' => $user->id]);
         $pimpinanJamaah = User::find($approval->user_id);
         $pimpinanJamaah->notify(new ApprovalNotification($approval, 'approve', 'pimpinan_jamaah')); // Tambahkan 'pimpinan_jamaah' sebagai recipient
+ 
+
+        return response()->json(["status" => "success", "message" => "Permintaan disetujui"], 200);   
     }
 
     public function approveUpdate($id)

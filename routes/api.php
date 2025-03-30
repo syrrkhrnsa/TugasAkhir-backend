@@ -8,6 +8,7 @@ use App\Http\Controllers\ActivityLogController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\UserController;
 
 /*
@@ -77,6 +78,8 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::get('/log-user/{userId}', [ActivityLogController::class, 'logByUser']);
     Route::get('/log-tanah-sertifikat/{sertifikatId}', [ActivityLogController::class, 'logTanahDanSertifikat']);
     Route::get('/log-semua-tanah-sertifikat', [ActivityLogController::class, 'logSemuaTanahDanSertifikat']);
+
+    Route::get('/dashboard/stats', [DashboardController::class, 'getDashboardStats']);
 
 
     Route::post('/notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead']);
