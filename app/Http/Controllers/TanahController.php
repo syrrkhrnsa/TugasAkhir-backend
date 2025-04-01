@@ -310,13 +310,18 @@ class TanahController extends Controller
 
     // DELETE: Hapus data tanah
     public function destroy($id)
-    {
-        $tanah = Tanah::find($id);
-        if (!$tanah) {
-            return response()->json(["status" => "error", "message" => "Data tidak ditemukan"], Response::HTTP_NOT_FOUND);
-        }
-
-        $tanah->delete();
-        return response()->json(["status" => "success", "message" => "Data berhasil dihapus"], Response::HTTP_OK);
+{
+    $tanah = Tanah::find($id);
+    if (!$tanah) {
+        return response()->json(["status" => "error", "message" => "Data tidak ditemukan"], Response::HTTP_NOT_FOUND);
     }
+
+    // Hapus semua sertifikat terkait terlebih dahulu
+    $tanah->sertifikats()->delete();
+    
+    // Kemudian hapus tanah
+    $tanah->delete();
+    
+    return response()->json(["status" => "success", "message" => "Data berhasil dihapus"], Response::HTTP_OK);
+}
 }
