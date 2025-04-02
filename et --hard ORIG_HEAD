@@ -1,0 +1,86 @@
+[33mb72e9c3[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m, [m[1;31morigin/reno[m[33m, [m[1;32mreno[m[33m)[m sertifikat, tanah, approval controller
+[33mfa84c17[m Merge branch 'main' of https://github.com/syrrkhrnsa/TugasAkhir-backend into reno
+[33m5d27915[m Merge pull request #28 from syrrkhrnsa/syira
+[33m8a47420[m perbaikan table sertifikat dan relasi nya
+[33mf3b4973[m route log activity
+[33md72be9e[m Merge branch 'main' of https://github.com/syrrkhrnsa/TugasAkhir-backend into reno
+[33med4556b[m feat : log sertifikat by id_sertifikat dan log tanah by id_tanah
+[33mb0005df[m Merge pull request #27 from syrrkhrnsa/syira
+[33mfaef34c[m unit test
+[33mfc55d47[m Merge pull request #26 from syrrkhrnsa/reno
+[33m8084949[m Merge branch 'main' of https://github.com/syrrkhrnsa/TugasAkhir-backend into reno
+[33mfa19559[m bug fixing, feat update sertifikat.
+[33m3459df5[m Merge pull request #25 from syrrkhrnsa/reno
+[33mc17e229[m fixing bug on tanah dan root api update sertif
+[33mb088228[m Merge pull request #24 from syrrkhrnsa/syira
+[33m1dd6bdd[m Merge branch 'main' into syira
+[33ma2cb9a9[m revisi method update sertifikat
+[33m97a3dcd[m Merge pull request #23 from syrrkhrnsa/syira
+[33mfeaa9a9[m unit test
+[33m16e674a[m unit testing controller
+[33mb06e786[m Merge pull request #22 from syrrkhrnsa/reno
+[33m9fe943f[m Merge
+[33m222a344[m Merge branch 'main' of https://github.com/syrrkhrnsa/TugasAkhir-backend into reno
+[33m0f7e591[m Merge pull request #21 from syrrkhrnsa/syira
+[33m1204ab2[m create tanah dan sertifikat
+[33mdecbdfc[m sertifikat wakaf dan tanah
+[33m8b0ac60[m Merge branch 'main' of https://github.com/syrrkhrnsa/TugasAkhir-backend into reno
+[33m6928282[m sertif controller
+[33m703d9a4[m Merge branch 'main' of https://github.com/syrrkhrnsa/TugasAkhir-backend into syira
+[33m6f51272[m perbaikan model user
+[33m1372c5b[m Merge pull request #20 from syrrkhrnsa/syira
+[33m6577377[m unit test file model
+[33md46ed84[m tambah variable buat user dan perbaikan logic reject
+[33m4d59786[m[33m ([m[1;31morigin/agista[m[33m)[m tambah variable buat user dan perbaikan logic reject
+[33m8cf953e[m Merge pull request #18 from syrrkhrnsa/syira
+[33m1aadaa6[m approval notif
+[33m00980ae[m Merge pull request #17 from syrrkhrnsa/syira
+[33meeb747a[m perubahan pada reject approval
+[33mee6fff5[m Merge pull request #16 from syrrkhrnsa/syira
+[33m0b76170[m legalitas
+[33m115de73[m Merge pull request #15 from syrrkhrnsa/agista
+[33m14ab144[m message approval
+[33mc7a0161[m Merge pull request #14 from syrrkhrnsa/syira
+[33m4d6a5ff[m memperbaiki status pada tanah dan sertifikat
+[33m095bd9b[m Merge pull request #13 from syrrkhrnsa/syira
+[33m12b971d[m relasi approval id
+[33maceabff[m Merge pull request #12 from syrrkhrnsa/reno
+[33m5c653b5[m fix conflict
+[33ma875d4f[m feat: dashboard legalitas
+[33m8a6bbeb[m Merge pull request #11 from syrrkhrnsa/syira
+[33m5ce79a2[m revisi kesekian
+[33m2afcd03[m revisi get data legalitas sertifikat
+[33m0baf97b[m Merge pull request #10 from syrrkhrnsa/syira
+[33meed78c0[m perbaikan update legalitas
+[33m12cddab[m nambah function
+[33m45f6ed2[m nambah function di notification
+[33m08ba0cb[m fix conflict
+[33mbaeb820[m Merge branch 'main' of https://github.com/syrrkhrnsa/TugasAkhir-backend into agista
+[33m22f51cd[m Merge pull request #8 from syrrkhrnsa/syira
+[33md37c6c8[m revisi notifikasi dan get data user
+[33m49d332a[m Merge branch 'main' of https://github.com/syrrkhrnsa/TugasAkhir-backend into agista
+[33mf328164[m LogActivity Revisi
+[33mdcaa414[m Merge pull request #7 from syrrkhrnsa/syira
+[33m5b5805e[m fitur notifikasi
+[33mc51954c[m Merge pull request #6 from syrrkhrnsa/syira
+[33m7006af6[m approval, dan segala perbaikan db sampai controller
+[33md5efc0b[m Merge branch 'main' of https://github.com/syrrkhrnsa/TugasAkhir-backend into agista
+[33m42563a7[m composer
+[33m4ab0288[m Merge pull request #5 from syrrkhrnsa/reno
+[33m22bb2cb[m sertifikat re-push
+[33m62b28a4[m Merge pull request #4 from syrrkhrnsa/CRUD_Sertifikat
+[33mf0998c1[m[33m ([m[1;31morigin/CRUD_Sertifikat[m[33m, [m[1;32mreno_dev[m[33m, [m[1;32mCRUD_Sertifikat[m[33m)[m sertifikat
+[33mfb94c1d[m Merge branch 'main' of https://github.com/syrrkhrnsa/TugasAkhir-backend into CRUD_Sertifikat
+[33mfc3a204[m Merge pull request #3 from syrrkhrnsa/syira
+[33m85b6e21[m memperbaiki controller tanah
+[33m2480056[m Merge pull request #2 from syrrkhrnsa/syira
+[33m419cdbd[m perbaikan function logout
+[33m59b2979[m Merge branch 'syira' of https://github.com/syrrkhrnsa/TugasAkhir-backend into reno_dev
+[33m15177cf[m perbaikan cors
+[33m5cca058[m Merge branch 'main' of https://github.com/syrrkhrnsa/TugasAkhir-backend into reno_dev
+[33m087ddc3[m Merge branch 'syira' of https://github.com/syrrkhrnsa/TugasAkhir-backend into reno_dev
+[33ma11a15b[m Merge pull request #1 from syrrkhrnsa/syira
+[33m132c08c[m backend tanah dan sertifikat
+[33m5e8b861[m Update README.md
+[33m19378db[m second commit
+[33m72a367e[m first commit
