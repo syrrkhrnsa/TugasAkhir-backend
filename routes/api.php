@@ -30,9 +30,6 @@ Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::get('/tanah/public', [TanahController::class, 'publicIndex']);
 Route::get('/sertifikat/public', [sertifikatWakafController::class, 'publicIndex']);
 
-
-
-
 // Protected routes
 Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::post('/logout', [AuthController::class, 'logout']);

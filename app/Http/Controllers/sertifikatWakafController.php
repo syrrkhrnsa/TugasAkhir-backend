@@ -180,52 +180,60 @@ class SertifikatWakafController extends Controller
 
     public function store(Request $request)
 {
+    $validator = Validator::make($request->all(), [
+        'dokumen' => 'nullable|file|mimes:pdf|max:5120',
+        'jenis_sertifikat' => 'required|string|in:BASTW,AIW,SW',
+        'status_pengajuan' => 'required|string|in:Diproses,Terbit,Ditolak',
+        'id_tanah' => 'required|uuid|exists:tanahs,id_tanah',
+        'tanggal_pengajuan' => 'required|date|before_or_equal:today',
+    ], [
+        'jenis_sertifikat.required' => 'Jenis sertifikat wajib diisi',
+        'status_pengajuan.required' => 'Status pengajuan wajib diisi',
+        'tanggal_pengajuan.required' => 'Tanggal pengajuan wajib diisi',
+        'tanggal_pengajuan.before_or_equal' => 'Tanggal tidak boleh melebihi hari ini',
+        'dokumen.mimes' => 'Dokumen harus berupa PDF',
+        'dokumen.max' => 'Ukuran dokumen maksimal 5MB',
+        'id_tanah.exists' => 'Tanah tidak ditemukan',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            "status" => "error",
+            "message" => "Validasi gagal",
+            "errors" => $validator->errors()
+        ], 422);
+    }
+
     try {
-        $validator = Validator::make($request->all(), [
-            'no_dokumen' => 'nullable|string|unique:sertifikats',
-            'dokumen' => 'nullable|file|mimes:pdf', // Changed from string to file validation
-            'jenis_sertifikat' => 'nullable|string',
-            'status_pengajuan' => 'nullable|string',
-            'id_tanah' => 'required|uuid',
-            'tanggal_pengajuan' => 'required|date', // Fixed validation rule
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                "status" => "error",
-                "message" => "Validasi gagal",
-                "errors" => $validator->errors()
-            ], Response::HTTP_BAD_REQUEST);
-        }
-
-        // Rest of your store method remains the same...
         $user = Auth::user();
         if (!$user) {
-            return response()->json(["status" => "error", "message" => "User tidak terautentikasi"], Response::HTTP_UNAUTHORIZED);
+            return response()->json(["status" => "error", "message" => "User tidak terautentikasi"], 401);
         }
 
+        $data = [
+            'id_sertifikat' => Str::uuid(),
+            'id_tanah' => $request->id_tanah,
+            'jenis_sertifikat' => $request->jenis_sertifikat,
+            'status_pengajuan' => $request->status_pengajuan,
+            'tanggal_pengajuan' => $request->tanggal_pengajuan,
+            'user_id' => $user->id,
+        ];
+
+        // Set status based on user role
         $rolePimpinanJamaah = '326f0dde-2851-4e47-ac5a-de6923447317';
-        $rolePimpinanCabang = '3594bece-a684-4287-b0a2-7429199772a3';
-        $roleBidgarWakaf = '26b2b64e-9ae3-4e2e-9063-590b1bb00480';
+        $data['status'] = ($user->role_id === $rolePimpinanJamaah) ? 'ditinjau' : 'disetujui';
 
+        // Handle file upload
+        if ($request->hasFile('dokumen')) {
+            $path = $request->file('dokumen')->store('dokumen', 'public');
+            $data['dokumen'] = $path;
+        }
+
+        // Create sertifikat
+        $sertifikat = Sertifikat::create($data);
+
+        // If Pimpinan Jamaah, create approval
         if ($user->role_id === $rolePimpinanJamaah) {
-            $data = [
-                'id_sertifikat' => Str::uuid(),
-                'id_tanah' => $request->id_tanah,
-                'no_dokumen' => $request->no_dokumen,
-                'jenis_sertifikat' => $request->jenis_sertifikat,
-                'status_pengajuan' => $request->status_pengajuan,
-                'tanggal_pengajuan' => $request->tanggal_pengajuan,
-                'status' => 'ditinjau',
-                'user_id' => $user->id,
-            ];
-
-            // Handle file upload
-            if ($request->hasFile('dokumen')) {
-                $path = $request->file('dokumen')->store('dokumen', 'public');
-                $data['dokumen'] = $path;
-            }
-
             $approval = Approval::create([
                 'user_id' => $user->id,
                 'type' => 'sertifikat',
@@ -234,8 +242,8 @@ class SertifikatWakafController extends Controller
                 'status' => 'ditinjau',
             ]);
 
-            // Kirim notifikasi ke Bidgar Wakaf
-            $bidgarWakaf = User::where('role_id', $roleBidgarWakaf)->get();
+            // Notify Bidgar Wakaf
+            $bidgarWakaf = User::where('role_id', '26b2b64e-9ae3-4e2e-9063-590b1bb00480')->get();
             foreach ($bidgarWakaf as $bidgar) {
                 $bidgar->notify(new ApprovalNotification($approval, 'create', 'bidgar'));
             }
@@ -243,41 +251,22 @@ class SertifikatWakafController extends Controller
             return response()->json([
                 "status" => "success",
                 "message" => "Permintaan telah dikirim ke Bidgar Wakaf untuk ditinjau.",
-            ], Response::HTTP_CREATED);
-        } else {
-            // Jika Pimpinan Cabang atau Bidgar Wakaf
-            $data = [
-                'id_sertifikat' => Str::uuid(),
-                'id_tanah' => $request->id_tanah,
-                'no_dokumen' => $request->no_dokumen,
-                'jenis_sertifikat' => $request->jenis_sertifikat,
-                'status_pengajuan' => $request->status_pengajuan,
-                'tanggal_pengajuan' => $request->tanggal_pengajuan,
-                'status' => "disetujui",
-                'user_id' => $user->id,
-            ];
-
-            // Handle file upload
-            if ($request->hasFile('dokumen')) {
-                $path = $request->file('dokumen')->store('dokumen', 'public');
-                $data['dokumen'] = $path;
-            }
-
-            $sertifikat = Sertifikat::create($data);
-
-            return response()->json([
-                "status" => "success",
-                "message" => "Data sertifikat berhasil ditambahkan dan disetujui.",
-                "data" => $sertifikat
-            ], Response::HTTP_CREATED);
+            ], 201);
         }
+
+        return response()->json([
+            "status" => "success",
+            "message" => "Sertifikat berhasil dibuat",
+            "data" => $sertifikat
+        ], 201);
+
     } catch (\Exception $e) {
-        Log::error('Error storing sertifikat: ' . $e->getMessage());
+        Log::error('Error creating sertifikat: ' . $e->getMessage());
         return response()->json([
             "status" => "error",
             "message" => "Terjadi kesalahan saat menyimpan data",
             "error" => $e->getMessage()
-        ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        ], 500);
     }
 }
 
