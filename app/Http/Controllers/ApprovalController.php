@@ -69,44 +69,47 @@ class ApprovalController extends Controller
 
 
     public function approve($id)
-    {
-        $user = Auth::user();
-        if (!$user || $user->role_id !== '26b2b64e-9ae3-4e2e-9063-590b1bb00480') {
-            return response()->json(["status" => "error", "message" => "Anda tidak memiliki izin"], 403);
-        }
-
-        $approval = Approval::find($id);
-        if (!$approval) {
-            return response()->json(["status" => "error", "message" => "Permintaan tidak ditemukan"], 404);
-        }
-
-        // Decode JSON dari 'data' yang ada dalam approval
-        $data = json_decode($approval->data, true);
-
-        // Pastikan 'data' sudah terdecode dengan benar
-        if (!$data) {
-            return response()->json(["status" => "error", "message" => "Data tidak valid"], 400);
-        }
-
-        $approval->update(['status' => 'disetujui', 'approver_id' => $user->id]);
-
-        // Cek tipe approval
-        if ($approval->type === 'tanah') {
-            // Jika tipe approval adalah tanah, simpan data ke tabel Tanah
-            Tanah::create(array_merge($data, ['status' => 'disetujui', 'user_id' => $approval->user_id]));
-        } elseif ($approval->type === 'sertifikat') {
-            // Jika tipe approval adalah sertifikat, simpan data ke tabel Sertifikat
-            Sertifikat::create(array_merge($data, ['status' => 'disetujui', 'user_id' => $approval->user_id]));
-        } else {
-            return response()->json(["status" => "error", "message" => "Tipe approval tidak valid"], 400);
-        }
-
-        $pimpinanJamaah = User::find($approval->user_id);
-        $pimpinanJamaah->notify(new ApprovalNotification($approval, 'approve', 'pimpinan_jamaah')); // Tambahkan 'pimpinan_jamaah' sebagai recipient
- 
-
-        return response()->json(["status" => "success", "message" => "Permintaan disetujui"], 200);   
+{
+    $user = Auth::user();
+    if (!$user || $user->role_id !== '26b2b64e-9ae3-4e2e-9063-590b1bb00480') {
+        return response()->json(["status" => "error", "message" => "Anda tidak memiliki izin"], 403);
     }
+
+    $approval = Approval::find($id);
+    if (!$approval) {
+        return response()->json(["status" => "error", "message" => "Permintaan tidak ditemukan"], 404);
+    }
+
+    // Decode JSON dari 'data' yang ada dalam approval
+    $data = json_decode($approval->data, true);
+
+    // Pastikan 'data' sudah terdecode dengan benar
+    if (!$data) {
+        return response()->json(["status" => "error", "message" => "Data tidak valid"], 400);
+    }
+
+    // Update status approval
+    $approval->update(['status' => 'disetujui', 'approver_id' => $user->id]);
+
+    // Cek tipe approval
+    if ($approval->type === 'tanah') {
+        Tanah::updateOrCreate(
+            ['id_tanah' => $data['id_tanah']],
+            array_merge($data, ['status' => 'disetujui', 'user_id' => $approval->user_id])
+        );
+    } elseif ($approval->type === 'sertifikat') {
+        // Jika tipe approval adalah sertifikat, update data yang sudah ada
+        Sertifikat::where('id_sertifikat', $data['id_sertifikat'])
+            ->update(['status' => 'disetujui']);
+    } else {
+        return response()->json(["status" => "error", "message" => "Tipe approval tidak valid"], 400);
+    }
+
+    $pimpinanJamaah = User::find($approval->user_id);
+    $pimpinanJamaah->notify(new ApprovalNotification($approval, 'approve', 'pimpinan_jamaah'));
+
+    return response()->json(["status" => "success", "message" => "Permintaan disetujui"], 200);   
+}
 
     public function approveUpdate($id)
     {

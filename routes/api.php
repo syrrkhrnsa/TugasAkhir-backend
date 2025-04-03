@@ -73,9 +73,12 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::get('/log-sertifikat', [ActivityLogController::class, 'logSertifikat']);
     Route::get('/log-status', [ActivityLogController::class, 'logStatus']);
     Route::get('/log-user/{userId}', [ActivityLogController::class, 'logByUser']);
-    Route::get('/log-tanah-sertifikat/{sertifikatId}', [ActivityLogController::class, 'logTanahDanSertifikat']);
-    Route::get('/log-semua-tanah-sertifikat', [ActivityLogController::class, 'logSemuaTanahDanSertifikat']);
-
+    // Tanah ID specific logs
+    Route::get('/log-tanah/{tanahId}', [ActivityLogController::class, 'logByTanahId']);
+    
+    // Sertifikat ID specific logs
+    Route::get('/log-sertifikat/{sertifikatId}', [ActivityLogController::class, 'logBySertifikatId']);
+    
     Route::get('/dashboard/stats', [DashboardController::class, 'getDashboardStats']);
 
 
