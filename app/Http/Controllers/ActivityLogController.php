@@ -103,29 +103,49 @@ class ActivityLogController extends Controller
     }
 
     public function logByTanahId($tanahId)
-    {
-        $logs = ActivityLog::where('model_type', 'App\\Models\\Tanah')
-            ->where('model_id', $tanahId)
-            ->with('user')
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function ($log) {
-                $changes = json_decode($log->changes, true);
-
-                return [
-                    'id' => $log->id,
-                    'model_id' => $log->model_id,
-                    'nama_user' => $log->user->name ?? 'Unknown',
-                    'aksi' => ucfirst($log->action),
-                    'model' => 'Tanah',
-                    'perubahan' => $changes,
-                    'waktu' => $log->created_at->format('H:i:s'),
-                    'tanggal' => $log->created_at->format('Y-m-d'),
-                ];
-            });
-
-        return response()->json($logs);
+{
+    // Normalize UUID
+    $normalizedId = strtolower(trim($tanahId, '"\' '));
+    
+    // Validate UUID format
+    if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/', $normalizedId)) {
+        return response()->json([
+            'error' => 'Format ID tanah tidak valid',
+            'received_id' => $tanahId,
+            'normalized_id' => $normalizedId
+        ], 400);
     }
+
+    $logs = ActivityLog::where('model_type', 'App\\Models\\Tanah')
+        ->where('model_id', $normalizedId)
+        ->with('user')
+        ->orderBy('created_at', 'desc')
+        ->get()
+        ->map(function ($log) {
+            $changes = is_string($log->changes) ? 
+                json_decode($log->changes, true) ?? ['raw' => $log->changes] : 
+                $log->changes;
+
+            return [
+                'id' => $log->id,
+                'model_id' => $log->model_id,
+                'nama_user' => $log->user->name ?? 'Unknown',
+                'aksi' => ucfirst($log->action),
+                'perubahan' => $changes,
+                'waktu' => $log->created_at->format('H:i:s'),
+                'tanggal' => $log->created_at->format('Y-m-d'),
+            ];
+        });
+
+    if ($logs->isEmpty()) {
+        return response()->json([
+            'error' => 'Data log tidak ditemukan',
+            'message' => 'Tidak ada aktivitas yang tercatat untuk tanah ini'
+        ], 404);
+    }
+
+    return response()->json($logs);
+}
 
     public function logBySertifikatId($sertifikatId)
 {
