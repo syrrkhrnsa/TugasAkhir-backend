@@ -30,9 +30,6 @@ Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::get('/tanah/public', [TanahController::class, 'publicIndex']);
 Route::get('/sertifikat/public', [sertifikatWakafController::class, 'publicIndex']);
 
-
-
-
 // Protected routes
 Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -58,6 +55,8 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::delete('/sertifikat/{id}', [sertifikatWakafController::class, 'destroy']);
     Route::get('/sertifikat/legalitas/{id}', [sertifikatWakafController::class, 'showLegalitas']);
     Route::get('/sertifikat/tanah/{id_tanah}', [sertifikatWakafController::class, 'getSertifikatByIdTanah']);
+
+    
     Route::get('/approvals', [ApprovalController::class, 'index']);
     Route::get('/approvals/{id}', [ApprovalController::class, 'show']);
     Route::post('/approvals/{id}/approve', [ApprovalController::class, 'approve']);
@@ -74,9 +73,12 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::get('/log-sertifikat', [ActivityLogController::class, 'logSertifikat']);
     Route::get('/log-status', [ActivityLogController::class, 'logStatus']);
     Route::get('/log-user/{userId}', [ActivityLogController::class, 'logByUser']);
-    Route::get('/log-tanah-sertifikat/{sertifikatId}', [ActivityLogController::class, 'logTanahDanSertifikat']);
-    Route::get('/log-semua-tanah-sertifikat', [ActivityLogController::class, 'logSemuaTanahDanSertifikat']);
-
+    // Tanah ID specific logs
+    Route::get('/log-tanah/{tanahId}', [ActivityLogController::class, 'logByTanahId']);
+    
+    // Sertifikat ID specific logs
+    Route::get('/log-sertifikat/{sertifikatId}', [ActivityLogController::class, 'logBySertifikatId']);
+    
     Route::get('/dashboard/stats', [DashboardController::class, 'getDashboardStats']);
 
 
