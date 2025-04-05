@@ -270,127 +270,121 @@ class SertifikatWakafController extends Controller
     }
 }
 
- public function update(Request $request, $id)
-    {
-        DB::beginTransaction();
-        try {
-            $user = Auth::user();
-            if (!$user) {
-                return response()->json([
-                    "status" => "error",
-                    "message" => "User tidak terautentikasi"
-                ], 401);
-            }
-
-            // Validate request data
-            $validator = Validator::make($request->all(), [
-                'jenis_sertifikat' => 'required|string|in:BASTW,AIW,SW',
-                'status_pengajuan' => 'required|string|in:Diproses,Terbit,Ditolak',
-                'tanggal_pengajuan' => 'required|date_format:Y-m-d',
-                'no_dokumen' => 'sometimes|string|max:100',
-                'dokumen' => 'sometimes|file|mimes:pdf|max:5120',
-            ], [
-                'jenis_sertifikat.required' => 'Jenis sertifikat wajib diisi',
-                'status_pengajuan.required' => 'Status pengajuan wajib diisi',
-                'tanggal_pengajuan.required' => 'Tanggal pengajuan wajib diisi',
-                'tanggal_pengajuan.date_format' => 'Format tanggal harus YYYY-MM-DD',
-                'dokumen.mimes' => 'Dokumen harus berupa file PDF',
-                'dokumen.max' => 'Ukuran dokumen maksimal 5MB',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    "status" => "error",
-                    "message" => "Validasi gagal",
-                    "errors" => $validator->errors()
-                ], 422);
-            }
-
-            // Role IDs
-            $rolePimpinanJamaah = '326f0dde-2851-4e47-ac5a-de6923447317';
-            $roleBidgarWakaf = '26b2b64e-9ae3-4e2e-9063-590b1bb00480';
-
-            // Find the specific sertifikat
-            $sertifikat = Sertifikat::where('id_sertifikat', $id)->firstOrFail();
-
-            // Prepare update data
-            $updateData = [
-                'no_dokumen' => $request->no_dokumen ?? $sertifikat->no_dokumen,
-                'jenis_sertifikat' => $request->jenis_sertifikat,
-                'status_pengajuan' => $request->status_pengajuan,
-                'tanggal_pengajuan' => $request->tanggal_pengajuan,
-            ];
-
-            // Handle file upload
-            if ($request->hasFile('dokumen')) {
-                // Delete old file if exists
-                if ($sertifikat->dokumen) {
-                    Storage::delete($sertifikat->dokumen);
-                }
-                $path = $request->file('dokumen')->store('dokumen', 'public');
-                $updateData['dokumen'] = $path;
-            }
-
-            // Pimpinan Jamaah workflow
-            if ($user->role_id === $rolePimpinanJamaah) {
-                // Save original data before update
-                $originalData = $sertifikat->getOriginal();
-                
-                // Create approval
-                $approval = Approval::create([
-                    'user_id' => $user->id,
-                    'type' => 'sertifikat_update',
-                    'data_id' => $id,
-                    'status' => 'ditinjau',
-                    'data' => json_encode([
-                    'previous_data' => $originalData,
-                    'updated_data' => $updateData
-                  ]),
-                ]);
-
-                // Update with pending status
-                $sertifikat->update(array_merge($updateData, [
-                    'status' => 'ditinjau'
-                ]));
-
-                // Notify Bidgar Wakaf
-                User::where('role_id', $roleBidgarWakaf)
-                    ->each(function($user) use ($approval) {
-                        $user->notify(new ApprovalNotification(
-                            $approval,
-                            'update',
-                            'bidgar'
-                        ));
-                    });
-
-                DB::commit();
-                return response()->json([
-                    "status" => "success",
-                    "message" => "Perubahan menunggu persetujuan Bidgar Wakaf",
-                    "approval_id" => $approval->id
-                ], 202);
-            }
-
-            // Bidgar Wakaf direct update
-            $sertifikat->update($updateData);
-            DB::commit();
-
-            return response()->json([
-                "status" => "success",
-                "message" => "Data ".$sertifikat->jenis_sertifikat." berhasil diperbarui",
-                "data" => $sertifikat
-            ], 200);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Sertifikat update error: '.$e->getMessage());
+public function update(Request $request, $id)
+{
+    DB::beginTransaction();
+    try {
+        $user = Auth::user();
+        if (!$user) {
             return response()->json([
                 "status" => "error",
-                "message" => "Gagal memperbarui data",
-                "error" => $e->getMessage()
-            ], 500);
+                "message" => "User tidak terautentikasi"
+            ], 401);
         }
+
+        // Validate request data
+        $validator = Validator::make($request->all(), [
+            'tanggal_pengajuan' => 'required|date_format:Y-m-d',
+            'no_dokumen' => 'sometimes|string|max:100',
+            'dokumen' => 'sometimes|file|mimes:pdf|max:5120',
+        ], [
+            'tanggal_pengajuan.required' => 'Tanggal pengajuan wajib diisi',
+            'tanggal_pengajuan.date_format' => 'Format tanggal harus YYYY-MM-DD',
+            'dokumen.mimes' => 'Dokumen harus berupa file PDF',
+            'dokumen.max' => 'Ukuran dokumen maksimal 5MB',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                "status" => "error",
+                "message" => "Validasi gagal",
+                "errors" => $validator->errors()
+            ], 422);
+        }
+
+        // Role IDs
+        $rolePimpinanJamaah = '326f0dde-2851-4e47-ac5a-de6923447317';
+        $roleBidgarWakaf = '26b2b64e-9ae3-4e2e-9063-590b1bb00480';
+
+        // Find the specific sertifikat
+        $sertifikat = Sertifikat::where('id_sertifikat', $id)->firstOrFail();
+
+        // Prepare update data
+        $updateData = [
+            'no_dokumen' => $request->no_dokumen ?? $sertifikat->no_dokumen,
+            'tanggal_pengajuan' => $request->tanggal_pengajuan,
+        ];
+
+        // Handle file upload
+        if ($request->hasFile('dokumen')) {
+            // Delete old file if exists
+            if ($sertifikat->dokumen) {
+                Storage::delete($sertifikat->dokumen);
+            }
+            $path = $request->file('dokumen')->store('dokumen', 'public');
+            $updateData['dokumen'] = $path;
+        }
+
+        // Pimpinan Jamaah workflow
+        if ($user->role_id === $rolePimpinanJamaah) {
+            // Save original data before update
+            $originalData = $sertifikat->getOriginal();
+            
+            // Create approval
+            $approval = Approval::create([
+                'user_id' => $user->id,
+                'type' => 'sertifikat_update',
+                'data_id' => $id,
+                'status' => 'ditinjau',
+                'data' => json_encode([
+                    'previous_data' => $originalData,
+                    'updated_data' => $updateData
+                ]),
+            ]);
+
+            // Update with pending status
+            $sertifikat->update(array_merge($updateData, [
+                'status' => 'ditinjau'
+            ]));
+
+            // Notify Bidgar Wakaf
+            User::where('role_id', $roleBidgarWakaf)
+                ->each(function($user) use ($approval) {
+                    $user->notify(new ApprovalNotification(
+                        $approval,
+                        'update',
+                        'bidgar'
+                    ));
+                });
+
+            DB::commit();
+            return response()->json([
+                "status" => "success",
+                "message" => "Perubahan menunggu persetujuan Bidgar Wakaf",
+                "approval_id" => $approval->id
+            ], 202);
+        }
+
+        // Bidgar Wakaf direct update
+        $sertifikat->update($updateData);
+        DB::commit();
+
+        return response()->json([
+            "status" => "success",
+            "message" => "Data sertifikat berhasil diperbarui",
+            "data" => $sertifikat
+        ], 200);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Sertifikat update error: '.$e->getMessage());
+        return response()->json([
+            "status" => "error",
+            "message" => "Gagal memperbarui data",
+            "error" => $e->getMessage()
+        ], 500);
     }
+}
 
     public function updateJenisSertifikat(Request $request, $id)
     {
