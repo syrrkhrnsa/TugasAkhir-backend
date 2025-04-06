@@ -22,20 +22,18 @@ class SertifikatModelTest extends TestCase
 
     public function testFillableAttributes()
     {
-        $fillable = [
+        $expected = [
             'id_sertifikat',
-            'id_tanah',
-            'noDokumenBastw',
-            'noDokumenAIW',
-            'noDokumenSW',
+            'no_dokumen',
+            'dokumen',
+            'jenis_sertifikat',
+            'status_pengajuan',
+            'tanggal_pengajuan',
             'status',
-            'legalitas',
             'user_id',
-            'dokBastw',
-            'dokAiw',
-            'dokSw',
+            'id_tanah'
         ];
-        $this->assertEquals($fillable, $this->sertifikat->getFillable());
+        $this->assertEquals($expected, $this->sertifikat->getFillable());
     }
 
     public function testPrimaryKey()

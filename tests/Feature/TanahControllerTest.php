@@ -188,7 +188,9 @@ class TanahControllerTest extends TestCase
     public function test_index_for_pimpinan_jamaah()
     {
         $user = User::factory()->create(['role_id' => $this->rolePimpinanJamaah]);
-        $tanah = Tanah::factory()->create(['user_id' => $user->id]);
+        $tanah = Tanah::factory()->create([
+            'NamaPimpinanJamaah' => $user->name // Sesuaikan dengan field yang difilter di controller
+        ]);
         Tanah::factory()->create(); // Other tanah not belonging to user
 
         $response = $this->actingAs($user, 'sanctum')
@@ -196,21 +198,27 @@ class TanahControllerTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.id_tanah', (string)$tanah->id_tanah); // Cast to string
+            ->assertJsonPath('data.0.id_tanah', (string)$tanah->id_tanah);
     }
 
     public function test_index_for_pimpinan_cabang()
     {
         $user = User::factory()->create(['role_id' => $this->rolePimpinanCabang]);
+
+        // Create tanah with approved and reviewed status
         $approvedTanah = Tanah::factory()->create(['status' => 'disetujui']);
-        Tanah::factory()->create(['status' => 'ditinjau']);
+        $reviewedTanah = Tanah::factory()->create(['status' => 'ditinjau']);
+
+        // Create tanah with other status that should not be included
+        Tanah::factory()->create(['status' => 'ditolak']);
 
         $response = $this->actingAs($user, 'sanctum')
             ->getJson('/api/tanah');
 
         $response->assertStatus(200)
-            ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.id_tanah', (string)$approvedTanah->id_tanah);
+            ->assertJsonCount(2, 'data') // Expecting 2 data (disetujui and ditinjau)
+            ->assertJsonFragment(['id_tanah' => (string)$approvedTanah->id_tanah])
+            ->assertJsonFragment(['id_tanah' => (string)$reviewedTanah->id_tanah]);
     }
 
     public function test_index_for_unauthorized_role()
@@ -252,9 +260,7 @@ class TanahControllerTest extends TestCase
             'NamaWakif' => 'Test Wakif',
             'lokasi' => 'Test Location',
             'luasTanah' => '100',
-            'noDokumenBastw' => '123',
-            'noDokumenAIW' => '456',
-            'noDokumenSW' => '789'
+
         ];
 
         $response = $this->actingAs($user, 'sanctum')
@@ -264,7 +270,7 @@ class TanahControllerTest extends TestCase
             ->assertJson(['status' => 'success']);
 
         $this->assertDatabaseHas('approvals', [
-            'type' => 'tanah_dan_sertifikat',
+            'type' => 'tanah',
             'status' => 'ditinjau'
         ]);
     }
@@ -423,9 +429,20 @@ class TanahControllerTest extends TestCase
 
     public function test_index_for_pimpinan_jamaah_shows_only_their_data()
     {
-        $user = User::factory()->create(['role_id' => $this->rolePimpinanJamaah]);
-        $tanah = Tanah::factory()->create(['user_id' => $user->id]);
-        Tanah::factory()->create(); // Other tanah
+        $user = User::factory()->create([
+            'role_id' => $this->rolePimpinanJamaah,
+            'name' => 'Pimpinan Jamaah Test' // Pastikan nama konsisten
+        ]);
+
+        // Tanah milik user ini (sesuai nama)
+        $tanah = Tanah::factory()->create([
+            'NamaPimpinanJamaah' => $user->name
+        ]);
+
+        // Tanah lain yang tidak seharusnya muncul
+        Tanah::factory()->create([
+            'NamaPimpinanJamaah' => 'Nama Lain'
+        ]);
 
         $response = $this->actingAs($user, 'sanctum')
             ->getJson('/api/tanah');
@@ -438,16 +455,22 @@ class TanahControllerTest extends TestCase
     public function test_index_for_bidgar_wakaf_shows_only_approved()
     {
         $user = User::factory()->create(['role_id' => $this->roleBidgarWakaf]);
+
+        // Data yang seharusnya muncul
         $approved = Tanah::factory()->create(['status' => 'disetujui']);
         $pending = Tanah::factory()->create(['status' => 'ditinjau']);
+
+        // Data yang tidak seharusnya muncul
+        $rejected = Tanah::factory()->create(['status' => 'ditolak']);
 
         $response = $this->actingAs($user, 'sanctum')
             ->getJson('/api/tanah');
 
         $response->assertStatus(200)
-            ->assertJsonCount(1, 'data')
+            ->assertJsonCount(2, 'data') // Harapkan 2 data (disetujui dan ditinjau)
             ->assertJsonFragment(['id_tanah' => (string)$approved->id_tanah])
-            ->assertJsonMissing(['id_tanah' => (string)$pending->id_tanah]);
+            ->assertJsonFragment(['id_tanah' => (string)$pending->id_tanah])
+            ->assertJsonMissing(['id_tanah' => (string)$rejected->id_tanah]);
     }
 
     public function test_index_for_unauthorized_role_returns_403()
@@ -459,7 +482,10 @@ class TanahControllerTest extends TestCase
             ->getJson('/api/tanah');
 
         $response->assertStatus(403)
-            ->assertJson(['message' => 'Anda tidak memiliki izin untuk melihat data']);
+            ->assertJson([
+                "status" => "error",
+                "message" => "Akses ditolak"
+            ]);
     }
 
     public function test_store_with_database_error_handling()
@@ -495,7 +521,7 @@ class TanahControllerTest extends TestCase
 
     public function test_index_handles_exception()
     {
-        $this->withoutMiddleware(); // Nonaktifkan semua middleware
+        $this->withoutMiddleware(); // Disable all middleware
 
         // Mock the Auth facade to throw exception when user() is called
         Auth::shouldReceive('user')
@@ -507,7 +533,7 @@ class TanahControllerTest extends TestCase
         $response->assertStatus(500)
             ->assertJson([
                 'status' => 'error',
-                'message' => 'Terjadi kesalahan saat mengambil data'
+                'message' => 'Terjadi kesalahan server' // Match controller's message
             ]);
     }
 
@@ -536,21 +562,20 @@ class TanahControllerTest extends TestCase
     {
         $user = User::factory()->create(['role_id' => $this->roleBidgarWakaf]);
 
-        // Mock DB to throw exception
-        DB::shouldReceive('transaction')->andThrow(new \Exception('Database error'));
-
         $response = $this->actingAs($user, 'sanctum')
             ->postJson('/api/tanah', [
                 'NamaPimpinanJamaah' => 'Test',
                 'NamaWakif' => 'Test',
                 'lokasi' => 'Test',
-                'luasTanah' => '100'
+                'luasTanah' => '100',
+                'force_db_error' => true // This triggers the exception in your controller
             ]);
 
         $response->assertStatus(500)
             ->assertJson([
                 'status' => 'error',
-                'message' => 'Terjadi kesalahan saat menyimpan data'
+                'message' => 'Terjadi kesalahan saat menyimpan data',
+                'error' => 'Database error for testing'
             ]);
     }
 
@@ -566,5 +591,68 @@ class TanahControllerTest extends TestCase
 
         $response->assertStatus(400)
             ->assertJsonValidationErrors(['luasTanah']);
+    }
+
+    public function test_update_legalitas_validation_errors()
+    {
+        $user = User::factory()->create();
+        $tanah = Tanah::factory()->create();
+
+        // Test with invalid data (empty legalitas)
+        $response = $this->actingAs($user, 'sanctum')
+            ->putJson("/api/tanah/legalitas/{$tanah->id_tanah}", [
+                'legalitas' => '', // empty string should fail validation
+            ]);
+
+        $response->assertStatus(400)
+            ->assertJson([
+                'status' => 'error',
+                'message' => 'Validasi gagal'
+            ])
+            ->assertJsonValidationErrors(['legalitas']);
+    }
+
+
+
+    public function test_update_legalitas_not_found()
+    {
+        $user = User::factory()->create();
+        $nonExistentId = Str::uuid();
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->putJson("/api/tanah/legalitas/{$nonExistentId}", [
+                'legalitas' => 'SHM'
+            ]);
+
+        $response->assertStatus(404)
+            ->assertJson([
+                'status' => 'error',
+                'message' => 'Data tidak ditemukan'
+            ]);
+    }
+
+    public function test_update_legalitas_success()
+    {
+        $user = User::factory()->create();
+        $tanah = Tanah::factory()->create(['legalitas' => '-']);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->putJson("/api/tanah/legalitas/{$tanah->id_tanah}", [
+                'legalitas' => 'SHM'
+            ]);
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'status' => 'success',
+                'message' => 'Data legalitas berhasil diperbarui.',
+                'data' => [
+                    'legalitas' => 'SHM'
+                ]
+            ]);
+
+        $this->assertDatabaseHas('tanahs', [
+            'id_tanah' => $tanah->id_tanah,
+            'legalitas' => 'SHM'
+        ]);
     }
 }

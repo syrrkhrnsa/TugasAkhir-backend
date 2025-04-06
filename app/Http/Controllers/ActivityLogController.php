@@ -20,7 +20,7 @@ class ActivityLogController extends Controller
             ->get()
             ->map(function ($log) {
                 $changes = json_decode($log->changes, true);
-    
+
                 return [
                     'nama_user' => $log->user->name ?? 'Unknown',
                     'aksi' => ucfirst($log->action),
@@ -29,7 +29,7 @@ class ActivityLogController extends Controller
                     'tanggal' => $log->created_at->format('Y-m-d'),
                 ];
             });
-    
+
         return response()->json($logs);
     }
 
@@ -56,28 +56,6 @@ class ActivityLogController extends Controller
         return response()->json($logs);
     }
 
-    /**
-     * Get logs related to Status changes.
-     */
-    public function logStatus()
-    {
-        $logs = ActivityLog::where('action', 'update')
-            ->whereRaw("JSON_CONTAINS(changes, '\"status\"', '$')")
-            ->with('user')
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function ($log) {
-                return [
-                    'nama_user' => $log->user->name ?? 'Unknown',
-                    'aksi' => 'Update Status',
-                    'perubahan' => json_decode($log->changes, true),
-                    'waktu' => $log->created_at->format('H:i:s'),
-                    'tanggal' => $log->created_at->format('Y-m-d'),
-                ];
-            });
-
-        return response()->json($logs);
-    }
 
     /**
      * Get logs by specific user.
@@ -106,7 +84,7 @@ class ActivityLogController extends Controller
 {
     // Normalize UUID
     $normalizedId = strtolower(trim($tanahId, '"\' '));
-    
+
     // Validate UUID format
     if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/', $normalizedId)) {
         return response()->json([
@@ -122,8 +100,8 @@ class ActivityLogController extends Controller
         ->orderBy('created_at', 'desc')
         ->get()
         ->map(function ($log) {
-            $changes = is_string($log->changes) ? 
-                json_decode($log->changes, true) ?? ['raw' => $log->changes] : 
+            $changes = is_string($log->changes) ?
+                json_decode($log->changes, true) ?? ['raw' => $log->changes] :
                 $log->changes;
 
             return [
@@ -151,7 +129,7 @@ class ActivityLogController extends Controller
 {
     // Normalisasi UUID - hilangkan tanda petik, spasi, dan convert ke lowercase
     $normalizedId = strtolower(trim($sertifikatId, '"\' '));
-    
+
     // Validasi format UUID
     if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/', $normalizedId)) {
         return response()->json([
@@ -172,11 +150,11 @@ class ActivityLogController extends Controller
         ->map(function ($log) {
             // Handle kemungkinan format changes yang berbeda
             $changes = $log->changes;
-            
+
             // Coba decode berbagai kemungkinan format
             if (is_string($changes)) {
-                $changes = json_decode($changes, true) ?? 
-                          json_decode(stripslashes($changes), true) ?? 
+                $changes = json_decode($changes, true) ??
+                          json_decode(stripslashes($changes), true) ??
                           ['raw_changes' => $changes];
             }
 
@@ -200,7 +178,7 @@ class ActivityLogController extends Controller
                       ->orWhere('model_id', 'like', '%'.$normalizedId.'%');
             })
             ->toSql();
-            
+
         return response()->json([
             'error' => 'Data log tidak ditemukan',
             'debug' => [
@@ -219,34 +197,5 @@ class ActivityLogController extends Controller
     return response()->json($logs);
 }
 
-    /**
-     * Get all logs for Tanah and Sertifikat
-     */
-    public function logSemuaTanahDanSertifikat()
-    {
-        $logs = ActivityLog::whereIn('model_type', [
-                'App\\Models\\Tanah',
-                'App\\Models\\Sertifikat'
-            ])
-            ->with('user')
-            ->orderBy('created_at', 'desc')
-            ->paginate(10)
-            ->through(function ($log) {
-                $changes = json_decode($log->changes, true);
-                $modelType = class_basename($log->model_type);
 
-                return [
-                    'id' => $log->id,
-                    'model_id' => $log->model_id,
-                    'nama_user' => $log->user->name ?? 'Unknown',
-                    'aksi' => ucfirst($log->action),
-                    'model' => $modelType,
-                    'perubahan' => $changes,
-                    'waktu' => $log->created_at->format('H:i:s'),
-                    'tanggal' => $log->created_at->format('Y-m-d'),
-                ];
-            });
-
-        return response()->json($logs);
-    }
 }
