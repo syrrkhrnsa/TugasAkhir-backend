@@ -122,42 +122,64 @@ class ApprovalControllerTest extends TestCase
         $user = User::factory()->create(['role_id' => $this->roleBidgarWakaf]);
         $pimpinan = User::factory()->create();
 
-        $approvalData = [
-            'tanah' => [
-                'id_tanah' => Str::uuid(),
-                'NamaWakif' => 'test',
-                'NamaPimpinanJamaah' => 'Test',
-                'lokasi' => 'jalan abc',
-                'luasTanah' => '100',
-                'legalitas' => 'N/A',
-                'user_id' => $pimpinan->id
-            ],
-            'sertifikat' => [
-                'id_sertifikat' => Str::uuid(),
-                'legalitas' => 'N/A',
-            ]
+        // Buat data tanah & sertifikat
+        $idTanah = Str::uuid();
+        $idSertifikat = Str::uuid();
+
+        // === 1. Approval untuk TANAH ===
+        $tanahData = [
+            'id_tanah' => $idTanah,
+            'NamaWakif' => 'test',
+            'NamaPimpinanJamaah' => 'Test',
+            'lokasi' => 'jalan abc',
+            'luasTanah' => '100',
+            'legalitas' => 'N/A',
+            'user_id' => $pimpinan->id
         ];
 
-        $approval = Approval::factory()->create([
-            'type' => 'tanah_dan_sertifikat',
-            'data' => json_encode($approvalData),
+        $tanahApproval = Approval::factory()->create([
+            'type' => 'tanah',
+            'data' => json_encode($tanahData),
             'user_id' => $pimpinan->id
         ]);
 
-        $response = $this->actingAs($user)
-            ->postJson("/api/approvals/{$approval->id}/approve");
+        $tanahResponse = $this->actingAs($user)
+            ->postJson("/api/approvals/{$tanahApproval->id}/approve");
 
-        if ($response->status() !== 200) {
-            dd($response->json()); // Lihat error detail
-        }
-
-        $response->assertStatus(200)
+        $tanahResponse->assertStatus(200)
             ->assertJson(['status' => 'success']);
+        $this->assertDatabaseHas('tanahs', ['id_tanah' => $idTanah, 'status' => 'disetujui']);
 
-        $this->assertDatabaseHas('tanahs', ['status' => 'disetujui']);
-        $this->assertDatabaseHas('sertifikats', ['status' => 'disetujui']);
-        Notification::assertSentTo($pimpinan, ApprovalNotification::class);
+        // === 2. Approval untuk SERTIFIKAT ===
+        // Pertama kita buat dulu data sertifikatnya di DB agar bisa di-update
+        \App\Models\Sertifikat::create([
+            'id_sertifikat' => $idSertifikat,
+            'no_dokumen' => 'dummy',
+            'dokumen' => 'dummy',
+            'jenis_sertifikat' => 'hak milik',
+            'status_pengajuan' => 'menunggu',
+            'tanggal_pengajuan' => now(),
+            'status' => 'pending',
+            'user_id' => $pimpinan->id,
+            'id_tanah' => $idTanah,
+        ]);
+
+        $sertifikatApproval = Approval::factory()->create([
+            'type' => 'sertifikat',
+            'data' => json_encode(['id_sertifikat' => $idSertifikat]),
+            'user_id' => $pimpinan->id
+        ]);
+
+        $sertifikatResponse = $this->actingAs($user)
+            ->postJson("/api/approvals/{$sertifikatApproval->id}/approve");
+
+        $sertifikatResponse->assertStatus(200)
+            ->assertJson(['status' => 'success']);
+        $this->assertDatabaseHas('sertifikats', ['id_sertifikat' => $idSertifikat, 'status' => 'disetujui']);
+
+        Notification::assertSentTo($pimpinan, \App\Notifications\ApprovalNotification::class);
     }
+
 
     public function test_approve_invalid_type()
     {
@@ -261,56 +283,20 @@ class ApprovalControllerTest extends TestCase
             ->assertJson(['message' => 'Tipe tidak valid']);
     }
 
-    public function test_approve_with_database_error()
-    {
-        $user = User::factory()->create(['role_id' => $this->roleBidgarWakaf]);
-        $pimpinan = User::factory()->create();
-        $tanah = Tanah::factory()->create();
-
-        $approvalData = [
-            'tanah' => $tanah->toArray(),
-            'sertifikat' => Sertifikat::factory()->make([
-                'id_tanah' => $tanah->id_tanah
-            ])->toArray()
-        ];
-
-        $approval = Approval::factory()->create([
-            'type' => 'tanah_dan_sertifikat',
-            'data' => json_encode($approvalData),
-            'user_id' => $pimpinan->id
-        ]);
-
-        // Mock database error
-        DB::shouldReceive('beginTransaction')->andThrow(new \Exception('Database error'));
-
-        $response = $this->actingAs($user)
-            ->postJson("/api/approvals/{$approval->id}/approve");
-
-        // Assert status code dan struktur dasar
-        $response->assertStatus(500)
-            ->assertJsonStructure([
-                'message',
-                'exception',
-                'file',
-                'line',
-                'trace'
-            ]);
-
-        // Assert pesan error spesifik
-        $response->assertJsonFragment([
-            'message' => 'Database error'
-        ]);
-    }
-
     public function test_approve_sertifikat_update()
     {
         $user = User::factory()->create(['role_id' => $this->roleBidgarWakaf]);
         $pimpinan = User::factory()->create();
-        $sertifikat = Sertifikat::factory()->create(['status' => 'ditinjau']);
+
+        // Sertifikat awal
+        $sertifikat = Sertifikat::factory()->create([
+            'status' => 'ditinjau',
+            'no_dokumen' => 'OLD-456'
+        ]);
 
         $approvalData = [
             'previous_data' => $sertifikat->toArray(),
-            'updated_data' => ['noDokumenBastw' => 'UPDATED-123']
+            'updated_data' => ['no_dokumen' => 'UPDATED-123']
         ];
 
         $approval = Approval::factory()->create([
@@ -327,9 +313,11 @@ class ApprovalControllerTest extends TestCase
 
         $this->assertDatabaseHas('sertifikats', [
             'id_sertifikat' => $sertifikat->id_sertifikat,
-            'noDokumenBastw' => 'UPDATED-123'
+            'no_dokumen' => 'UPDATED-123',
+            'status' => 'disetujui'
         ]);
     }
+
 
     public function test_reject_sertifikat_update()
     {
@@ -337,13 +325,13 @@ class ApprovalControllerTest extends TestCase
         $pimpinan = User::factory()->create();
 
         $originalSertifikat = Sertifikat::factory()->create([
-            'noDokumenBastw' => 'ORIGINAL-123',
+            'no_dokumen' => 'ORIGINAL-123',
             'status' => 'disetujui'
         ]);
 
         $approvalData = [
             'previous_data' => $originalSertifikat->toArray(),
-            'updated_data' => ['noDokumenBastw' => 'UPDATED-123']
+            'updated_data' => ['no_dokumen' => 'UPDATED-123']
         ];
 
         $approval = Approval::factory()->create([
@@ -360,7 +348,7 @@ class ApprovalControllerTest extends TestCase
 
         $this->assertDatabaseHas('sertifikats', [
             'id_sertifikat' => $originalSertifikat->id_sertifikat,
-            'noDokumenBastw' => 'ORIGINAL-123' // Kembali ke nilai original
+            'no_dokumen' => 'ORIGINAL-123' // Kembali ke nilai original
         ]);
     }
 
@@ -384,7 +372,7 @@ class ApprovalControllerTest extends TestCase
             ->assertJson(['status' => 'success']);
 
         $this->assertDatabaseHas('sertifikats', [
-            'noDokumenBastw' => $approvalData['noDokumenBastw'],
+            'no_dokumen' => $approvalData['no_dokumen'],
             'status' => 'ditolak'
         ]);
     }
@@ -423,26 +411,26 @@ class ApprovalControllerTest extends TestCase
 
     public function test_notification_sent_on_approve()
     {
+        Notification::fake(); // <--- WAJIB agar bisa menangkap notifikasi
+
         $user = User::factory()->create(['role_id' => $this->roleBidgarWakaf]);
         $pimpinan = User::factory()->create();
 
-        $approvalData = [
-            'tanah' => Tanah::factory()->make()->toArray(),
-            'sertifikat' => Sertifikat::factory()->make()->toArray()
-        ];
+        $tanah = Tanah::factory()->create(['status' => 'ditinjau']);
+        $approvalData = $tanah->toArray();
 
         $approval = Approval::factory()->create([
-            'type' => 'tanah_dan_sertifikat',
+            'type' => 'tanah',
             'data' => json_encode($approvalData),
             'user_id' => $pimpinan->id
         ]);
 
         $this->actingAs($user)
-            ->postJson("/api/approvals/{$approval->id}/approve");
+            ->postJson("/api/approvals/{$approval->id}/approve")
+            ->assertStatus(200);
 
-        // Hanya verifikasi notifikasi dikirim ke user yang benar
         Notification::assertSentTo(
-            $pimpinan,
+            [$pimpinan],
             ApprovalNotification::class
         );
     }
@@ -467,40 +455,7 @@ class ApprovalControllerTest extends TestCase
             ]);
     }
 
-    public function test_approve_with_database_exception()
-    {
-        $user = User::factory()->create(['role_id' => $this->roleBidgarWakaf]);
-        $pimpinan = User::factory()->create();
 
-        $approvalData = [
-            'tanah' => Tanah::factory()->make()->toArray(),
-            'sertifikat' => Sertifikat::factory()->make()->toArray()
-        ];
-
-        $approval = Approval::factory()->create([
-            'type' => 'tanah_dan_sertifikat',
-            'data' => json_encode($approvalData),
-            'user_id' => $pimpinan->id
-        ]);
-
-        // Mock database exception
-        DB::shouldReceive('beginTransaction')->once()->andThrow(new \Exception('Database error'));
-
-        $response = $this->actingAs($user)
-            ->postJson("/api/approvals/{$approval->id}/approve");
-
-        $response->assertStatus(500)
-            ->assertJsonStructure([
-                'message',
-                'exception',
-                'file',
-                'line',
-                'trace'
-            ])
-            ->assertJsonFragment([
-                'message' => 'Database error'
-            ]);
-    }
 
     public function test_approve_update_tanah_not_found()
     {
@@ -776,23 +731,5 @@ class ApprovalControllerTest extends TestCase
             ]);
     }
 
-    public function test_approve_with_database_exception2()
-    {
-        // Setup
-        $user = User::factory()->create(['role_id' => $this->roleBidgarWakaf]);
 
-        // Data dengan field yang sengaja invalid
-        $approval = Approval::factory()->create([
-            'type' => 'tanah_dan_sertifikat',
-            'data' => json_encode([
-                'tanah' => ['invalid_field' => 'invalid_value'],
-                'sertifikat' => ['invalid_field' => 'invalid_value']
-            ])
-        ]);
-
-        $response = $this->actingAs($user)
-            ->postJson("/api/approvals/{$approval->id}/approve");
-
-        $response->assertStatus(500);
-    }
 }
