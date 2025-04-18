@@ -23,7 +23,17 @@ class Tanah extends Model
         'luasTanah',
         'legalitas',
         'status',
-        'user_id'
+        'user_id',
+
+        'jenis_tanah',
+        'batas_timur',
+        'batas_selatan',
+        'batas_barat',
+        'batas_utara',
+        'panjang_tanah',
+        'lebar_tanah',
+        'catatan',
+        'alamat_wakif'
     ];
     
     // Changed to hasMany since one tanah can have many sertifikats
@@ -41,5 +51,10 @@ class Tanah extends Model
     public function approvals(): HasMany
     {
         return $this->hasMany(Approval::class, 'data_id', 'id_tanah');
+    }
+
+    public function pemetaanTanah(): HasMany
+    {
+        return $this->hasMany(PemetaanTanah::class, 'id_tanah', 'id_tanah');
     }
 }
