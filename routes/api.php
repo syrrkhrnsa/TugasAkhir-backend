@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\MinioUploadController;
 
 /*
 |--------------------------------------------------------------------------
@@ -29,6 +30,11 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::get('/tanah/public', [TanahController::class, 'publicIndex']);
 Route::get('/sertifikat/public', [sertifikatWakafController::class, 'publicIndex']);
+
+Route::post('/upload-minio', [MinioUploadController::class, 'upload']);
+Route::get('/certificate/{filename}', [MinioUploadController::class, 'getCertificate']); // Untuk download
+Route::get('/certificate/view/{filename}', [MinioUploadController::class, 'viewCertificate']); // Untuk lihat URL
+Route::delete('/certificate/delete/{filename}', [MinioUploadController::class, 'deleteCertificate']); // Untuk delete
 
 // Protected routes
 Route::group(['middleware' => ['auth:sanctum']], function () {
@@ -83,6 +89,8 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
 
 
     Route::post('/notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead']);
+
+    
 });
 
 Route::middleware('auth:api')->get('/user', function (Request $request) {
