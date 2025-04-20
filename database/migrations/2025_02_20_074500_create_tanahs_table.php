@@ -16,6 +16,17 @@ return new class extends Migration {
             $table->string('legalitas');
             $table->string('status');
             $table->uuid('user_id');
+
+            $table->string('jenis_tanah')->nullable();
+            $table->string('batas_timur')->nullable();
+            $table->string('batas_selatan')->nullable();
+            $table->string('batas_barat')->nullable();
+            $table->string('batas_utara')->nullable();
+            $table->string('panjang_tanah')->nullable();
+            $table->string('lebar_tanah')->nullable();
+            $table->text('catatan')->nullable();
+            $table->text('alamat_wakif')->nullable();
+            
             $table->timestamps();
 
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
