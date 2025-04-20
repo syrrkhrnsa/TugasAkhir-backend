@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\PemetaanTanahController;
+use App\Http\Controllers\PemetaanFasilitasController;
 
 /*
 |--------------------------------------------------------------------------
@@ -80,6 +82,22 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::get('/log-sertifikat/{sertifikatId}', [ActivityLogController::class, 'logBySertifikatId']);
     
     Route::get('/dashboard/stats', [DashboardController::class, 'getDashboardStats']);
+
+    Route::prefix('pemetaan')->group(function () {
+        // Pemetaan Tanah
+        Route::get('/tanah/{tanahId}', [PemetaanTanahController::class, 'index']);
+        Route::post('/tanah/{tanahId}', [PemetaanTanahController::class, 'store']);
+        Route::get('/tanah-detail/{id}', [PemetaanTanahController::class, 'show']);
+        Route::put('/tanah/{id}', [PemetaanTanahController::class, 'update']);
+        Route::delete('/tanah/{id}', [PemetaanTanahController::class, 'destroy']);
+    
+        // Pemetaan Fasilitas
+        Route::get('/fasilitas/{pemetaanTanahId}', [PemetaanFasilitasController::class, 'index']);
+        Route::post('/fasilitas/{pemetaanTanahId}', [PemetaanFasilitasController::class, 'store']);
+        Route::get('/fasilitas-detail/{id}', [PemetaanFasilitasController::class, 'show']);
+        Route::put('/fasilitas/{id}', [PemetaanFasilitasController::class, 'update']);
+        Route::delete('/fasilitas/{id}', [PemetaanFasilitasController::class, 'destroy']);
+    });
 
 
     Route::post('/notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead']);
