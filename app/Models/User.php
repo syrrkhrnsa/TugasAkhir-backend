@@ -82,4 +82,14 @@ class User extends Authenticatable
     {
         return $this->morphMany(CustomNotification::class, 'notifiable')->latest();
     }
+
+    public function pemetaanTanah()
+    {
+        return $this->hasMany(PemetaanTanah::class, 'id_user');
+    }
+
+    public function pemetaanFasilitas()
+    {
+        return $this->hasMany(PemetaanFasilitas::class, 'id_user');
+    }
 }
