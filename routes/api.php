@@ -30,8 +30,23 @@ use App\Http\Controllers\FasilitasController;
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login'])->name('login');
-Route::get('/tanah/public', [TanahController::class, 'publicIndex']);
+
+Route::get('tanah/public', [TanahController::class, 'publicIndex']);
+Route::get('tanah/public/{id}', [TanahController::class, 'publicShow']);
+Route::get('tanah/search/public', [TanahController::class, 'publicSearch']);
+Route::get('tanah/jenis/{jenisTanah}/public', [TanahController::class, 'publicByJenis']);
+Route::get('tanah/pimpinan/{namaPimpinan}/public', [TanahController::class, 'publicByPimpinan']);
+
 Route::get('/sertifikat/public', [sertifikatWakafController::class, 'publicIndex']);
+
+Route::get('pemetaan/public', [PemetaanTanahController::class, 'publicIndex']);
+Route::get('pemetaan/public/{id}', [PemetaanTanahController::class, 'publicShow']);
+Route::get('tanah/{tanahId}/pemetaan/public', [PemetaanTanahController::class, 'publicByTanah']);
+
+Route::get('fasilitas/public', [PemetaanFasilitasController::class, 'publicIndex']);
+Route::get('fasilitas/public/{id}', [PemetaanFasilitasController::class, 'publicShow']);
+Route::get('pemetaan/{pemetaanTanahId}/fasilitas/public', [PemetaanFasilitasController::class, 'publicByPemetaanTanah']);
+Route::get('fasilitas/jenis/{jenisFasilitas}/public', [PemetaanFasilitasController::class, 'publicByJenis']);
 
 // Protected routes
 Route::group(['middleware' => ['auth:sanctum']], function () {
