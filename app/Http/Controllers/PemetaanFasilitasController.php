@@ -10,7 +10,6 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
 
-
 class PemetaanFasilitasController extends Controller
 {
     public function publicIndex()
@@ -74,7 +73,8 @@ class PemetaanFasilitasController extends Controller
     public function store(Request $request, $pemetaanTanahId)
     {
         $validator = Validator::make($request->all(), [
-            'jenis_fasilitas' => 'required|string',
+            'jenis_fasilitas' => 'required|string|in:Bergerak,Tidak Bergerak',
+            'kategori_fasilitas' => 'required|string|max:255',
             'nama_fasilitas' => 'required|string|max:255',
             'jenis_geometri' => 'required|string|in:POINT,LINESTRING,POLYGON',
             'geometri' => 'required|json',
@@ -104,6 +104,7 @@ class PemetaanFasilitasController extends Controller
                 'id_pemetaan_tanah' => $pemetaanTanahId,
                 'id_user' => auth()->id(),
                 'jenis_fasilitas' => $request->jenis_fasilitas,
+                'kategori_fasilitas' => $request->kategori_fasilitas,
                 'nama_fasilitas' => $request->nama_fasilitas,
                 'keterangan' => $request->keterangan,
                 'jenis_geometri' => $request->jenis_geometri,
@@ -161,10 +162,12 @@ class PemetaanFasilitasController extends Controller
     public function update(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
-            'jenis_fasilitas' => 'sometimes|string',
+            'jenis_fasilitas' => 'sometimes|string|in:Bergerak,Tidak Bergerak',
+            'kategori_fasilitas' => 'sometimes|string|max:255',
             'nama_fasilitas' => 'sometimes|string',
             'jenis_geometri' => 'sometimes|string|in:POINT,LINESTRING,POLYGON',
             'geometri' => 'sometimes|json',
+            'keterangan' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -180,6 +183,7 @@ class PemetaanFasilitasController extends Controller
 
             $updateData = [
                 'jenis_fasilitas' => $request->jenis_fasilitas ?? $fasilitas->jenis_fasilitas,
+                'kategori_fasilitas' => $request->kategori_fasilitas ?? $fasilitas->kategori_fasilitas,
                 'nama_fasilitas' => $request->nama_fasilitas ?? $fasilitas->nama_fasilitas,
                 'keterangan' => $request->keterangan ?? $fasilitas->keterangan,
             ];

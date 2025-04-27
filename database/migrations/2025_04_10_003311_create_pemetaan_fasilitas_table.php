@@ -13,7 +13,8 @@ return new class extends Migration
             $table->uuid('id_pemetaan_fasilitas')->primary();
             $table->uuid('id_pemetaan_tanah');
             $table->uuid('id_user');
-            $table->string('jenis_fasilitas'); // MASJID, SEKOLAH, PEMAKAMAN, dll
+            $table->enum('jenis_fasilitas', ['Bergerak', 'Tidak Bergerak']); // ENUM with only Bergerak and Tidak Bergerak
+            $table->string('kategori_fasilitas'); // New field for category
             $table->string('nama_fasilitas');
             $table->text('keterangan')->nullable();
             $table->string('jenis_geometri'); // POINT, POLYGON, LINESTRING, dll
@@ -37,19 +38,20 @@ return new class extends Migration
                   ->onUpdate('cascade');
         });
 
-        // Tambahkan komentar untuk kolom
-        DB::statement("COMMENT ON COLUMN pemetaan_fasilitas.jenis_fasilitas IS 'Jenis fasilitas: MASJID, SEKOLAH, PEMAKAMAN, dll'");
+        // Add comments for columns
+        DB::statement("COMMENT ON COLUMN pemetaan_fasilitas.jenis_fasilitas IS 'Jenis fasilitas: Bergerak, Tidak Bergerak'");
+        DB::statement("COMMENT ON COLUMN pemetaan_fasilitas.kategori_fasilitas IS 'Kategori fasilitas, seperti umum atau khusus'");
         DB::statement("COMMENT ON COLUMN pemetaan_fasilitas.jenis_geometri IS 'Tipe geometri: POINT, POLYGON, LINESTRING, dll'");
         DB::statement("COMMENT ON COLUMN pemetaan_fasilitas.geometri IS 'Menyimpan data geometri fasilitas dalam format PostGIS (WGS84)'");
 
-        // Add spatial index dengan kondisi IF NOT EXISTS
+        // Add spatial index for geometry column
         DB::statement('
             CREATE INDEX IF NOT EXISTS pemetaan_fasilitas_geometri_index 
             ON pemetaan_fasilitas 
             USING GIST(geometri)
         ');
 
-        // Index untuk pencarian berdasarkan jenis fasilitas
+        // Index for searching by jenis_fasilitas
         DB::statement('
             CREATE INDEX IF NOT EXISTS pemetaan_fasilitas_jenis_index 
             ON pemetaan_fasilitas (jenis_fasilitas)
@@ -58,11 +60,11 @@ return new class extends Migration
 
     public function down()
     {
-        // Hapus indeks terlebih dahulu
+        // Drop indices first
         DB::statement('DROP INDEX IF EXISTS pemetaan_fasilitas_geometri_index');
         DB::statement('DROP INDEX IF EXISTS pemetaan_fasilitas_jenis_index');
         
-        // Baru hapus tabel
+        // Then drop the table
         Schema::dropIfExists('pemetaan_fasilitas');
     }
 };
