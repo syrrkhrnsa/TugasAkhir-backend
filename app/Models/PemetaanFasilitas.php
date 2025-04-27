@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Casts\GeometryCast;
 use Illuminate\Support\Facades\DB;
 
-
 class PemetaanFasilitas extends Model
 {
     protected $table = 'pemetaan_fasilitas';
@@ -20,6 +19,7 @@ class PemetaanFasilitas extends Model
         'id_pemetaan_tanah',
         'id_user',
         'jenis_fasilitas',
+        'kategori_fasilitas', // Added new field
         'nama_fasilitas',
         'keterangan',
         'jenis_geometri',
@@ -27,8 +27,13 @@ class PemetaanFasilitas extends Model
     ];
 
     protected $casts = [
-        'geometri' => GeometryCast::class
+        'geometri' => GeometryCast::class,
+        'jenis_fasilitas' => 'string' // Enum will be cast to string
     ];
+
+    // Optionally, you can add constants for jenis_fasilitas
+    const JENIS_BERGERAK = 'Bergerak';
+    const JENIS_TIDAK_BERGERAK = 'Tidak Bergerak';
 
     public function pemetaanTanah(): BelongsTo
     {

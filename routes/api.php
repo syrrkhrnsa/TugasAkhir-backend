@@ -12,6 +12,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\PemetaanTanahController;
 use App\Http\Controllers\PemetaanFasilitasController;
+use App\Http\Controllers\FasilitasController;
 
 /*
 |--------------------------------------------------------------------------
@@ -75,11 +76,9 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::get('/log-sertifikat', [ActivityLogController::class, 'logSertifikat']);
     Route::get('/log-status', [ActivityLogController::class, 'logStatus']);
     Route::get('/log-user/{userId}', [ActivityLogController::class, 'logByUser']);
-    // Tanah ID specific logs
     Route::get('/log-tanah/{tanahId}', [ActivityLogController::class, 'logByTanahId']);
-    
-    // Sertifikat ID specific logs
     Route::get('/log-sertifikat/{sertifikatId}', [ActivityLogController::class, 'logBySertifikatId']);
+    Route::get('/log-sertifikat-by-tanah/{tanahId}', [ActivityLogController::class, 'logSertifikatByTanahId']);
     
     Route::get('/dashboard/stats', [DashboardController::class, 'getDashboardStats']);
 
@@ -98,7 +97,6 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
         Route::put('/fasilitas/{id}', [PemetaanFasilitasController::class, 'update']);
         Route::delete('/fasilitas/{id}', [PemetaanFasilitasController::class, 'destroy']);
     });
-
 
     Route::post('/notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead']);
 });
