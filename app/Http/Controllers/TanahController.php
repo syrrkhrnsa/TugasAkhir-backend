@@ -29,6 +29,128 @@ class TanahController extends Controller
         ], Response::HTTP_OK);
     }
 
+    // Method baru untuk menampilkan detail tanah tertentu tanpa login
+    public function publicShow($id)
+    {
+        try {
+            $tanah = Tanah::with('sertifikats')->find($id);
+            
+            if (!$tanah) {
+                return response()->json([
+                    "status" => "error", 
+                    "message" => "Data tanah tidak ditemukan"
+                ], Response::HTTP_NOT_FOUND);
+            }
+            
+            if ($tanah->status !== 'disetujui') {
+                return response()->json([
+                    "status" => "error", 
+                    "message" => "Data tanah tidak tersedia untuk publik"
+                ], Response::HTTP_FORBIDDEN);
+            }
+            
+            return response()->json([
+                "status" => "success",
+                "message" => "Detail tanah berhasil diambil",
+                "data" => $tanah
+            ], Response::HTTP_OK);
+            
+        } catch (\Exception $e) {
+            Log::error('Error mengambil detail tanah publik: ' . $e->getMessage());
+            return response()->json([
+                "status" => "error",
+                "message" => "Terjadi kesalahan server"
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // Method untuk mencari tanah berdasarkan lokasi secara publik
+    public function publicSearch(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'keyword' => 'required|string|min:3',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    "status" => "error",
+                    "message" => "Validasi gagal",
+                    "errors" => $validator->errors()
+                ], Response::HTTP_BAD_REQUEST);
+            }
+
+            $keyword = $request->keyword;
+            
+            $tanah = Tanah::where('status', 'disetujui')
+                ->where(function($query) use ($keyword) {
+                    $query->where('lokasi', 'like', "%{$keyword}%")
+                          ->orWhere('NamaPimpinanJamaah', 'like', "%{$keyword}%")
+                          ->orWhere('jenis_tanah', 'like', "%{$keyword}%");
+                })
+                ->get();
+                
+            return response()->json([
+                "status" => "success",
+                "message" => "Pencarian tanah berhasil",
+                "data" => $tanah
+            ], Response::HTTP_OK);
+            
+        } catch (\Exception $e) {
+            Log::error('Error pencarian tanah publik: ' . $e->getMessage());
+            return response()->json([
+                "status" => "error",
+                "message" => "Terjadi kesalahan server"
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // Method untuk mendapatkan tanah berdasarkan jenis secara publik
+    public function publicByJenis($jenisTanah)
+    {
+        try {
+            $tanah = Tanah::where('status', 'disetujui')
+                    ->where('jenis_tanah', $jenisTanah)
+                    ->get();
+                    
+            return response()->json([
+                "status" => "success",
+                "message" => "Data tanah berdasarkan jenis berhasil diambil",
+                "data" => $tanah
+            ], Response::HTTP_OK);
+            
+        } catch (\Exception $e) {
+            Log::error('Error mengambil tanah berdasarkan jenis publik: ' . $e->getMessage());
+            return response()->json([
+                "status" => "error",
+                "message" => "Terjadi kesalahan server"
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // Method untuk mendapatkan tanah berdasarkan pimpinan jamaah secara publik
+    public function publicByPimpinan($namaPimpinan)
+    {
+        try {
+            $tanah = Tanah::where('status', 'disetujui')
+                    ->where('NamaPimpinanJamaah', $namaPimpinan)
+                    ->get();
+                    
+            return response()->json([
+                "status" => "success",
+                "message" => "Data tanah berdasarkan pimpinan jamaah berhasil diambil",
+                "data" => $tanah
+            ], Response::HTTP_OK);
+            
+        } catch (\Exception $e) {
+            Log::error('Error mengambil tanah berdasarkan pimpinan publik: ' . $e->getMessage());
+            return response()->json([
+                "status" => "error",
+                "message" => "Terjadi kesalahan server"
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
     public function index()
     {
         try {

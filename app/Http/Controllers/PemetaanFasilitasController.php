@@ -13,6 +13,55 @@ use Illuminate\Support\Facades\Log;
 
 class PemetaanFasilitasController extends Controller
 {
+    public function publicIndex()
+    {
+        $fasilitas = PemetaanFasilitas::with('pemetaanTanah')->get();
+        return response()->json([
+            'status' => 'success',
+            'data' => $fasilitas
+        ]);
+    }
+
+    // Metode untuk melihat detail pemetaan fasilitas tertentu tanpa login
+    public function publicShow($id)
+    {
+        try {
+            $fasilitas = PemetaanFasilitas::with('pemetaanTanah')->findOrFail($id);
+            return response()->json([
+                'status' => 'success',
+                'data' => $fasilitas
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Pemetaan fasilitas tidak ditemukan',
+                'error' => $e->getMessage()
+            ], 404);
+        }
+    }
+
+    // Metode untuk melihat semua fasilitas berdasarkan id pemetaan tanah tertentu tanpa login
+    public function publicByPemetaanTanah($pemetaanTanahId)
+    {
+        $fasilitas = PemetaanFasilitas::where('id_pemetaan_tanah', $pemetaanTanahId)->get();
+        return response()->json([
+            'status' => 'success',
+            'data' => $fasilitas
+        ]);
+    }
+
+    // Metode publik untuk mendapatkan semua fasilitas berdasarkan jenis
+    public function publicByJenis($jenisFasilitas)
+    {
+        $fasilitas = PemetaanFasilitas::where('jenis_fasilitas', $jenisFasilitas)
+                                      ->with('pemetaanTanah')
+                                      ->get();
+        return response()->json([
+            'status' => 'success',
+            'data' => $fasilitas
+        ]);
+    }
+    
     public function index($pemetaanTanahId)
     {
         $fasilitas = PemetaanFasilitas::where('id_pemetaan_tanah', $pemetaanTanahId)->get();
