@@ -12,6 +12,43 @@ use Illuminate\Support\Facades\Log;
 
 class PemetaanTanahController extends Controller
 {
+    public function publicIndex()
+    {
+        $pemetaan = PemetaanTanah::with('tanah')->get();
+        return response()->json([
+            'status' => 'success',
+            'data' => $pemetaan
+        ]);
+    }
+
+    // Metode untuk melihat detail pemetaan tanah tertentu tanpa login
+    public function publicShow($id)
+    {
+        try {
+            $pemetaan = PemetaanTanah::with(['tanah', 'fasilitas'])->findOrFail($id);
+            return response()->json([
+                'status' => 'success',
+                'data' => $pemetaan
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Pemetaan tanah tidak ditemukan',
+                'error' => $e->getMessage()
+            ], 404);
+        }
+    }
+
+    // Metode untuk melihat semua pemetaan tanah berdasarkan id tanah tertentu tanpa login
+    public function publicByTanah($tanahId)
+    {
+        $pemetaan = PemetaanTanah::where('id_tanah', $tanahId)->get();
+        return response()->json([
+            'status' => 'success',
+            'data' => $pemetaan
+        ]);
+    }
+    
     public function index($tanahId)
     {
         $pemetaan = PemetaanTanah::where('id_tanah', $tanahId)->get();
