@@ -97,6 +97,15 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     
     Route::get('/dashboard/stats', [DashboardController::class, 'getDashboardStats']);
 
+    Route::prefix('fasilitas')->group(function () {
+        Route::get('/', [FasilitasController::class, 'index']);
+        Route::post('/', [FasilitasController::class, 'store']);
+        Route::get('/{id}', [FasilitasController::class, 'show']);
+        Route::put('/{id}', [FasilitasController::class, 'update']);
+        Route::delete('/{id}', [FasilitasController::class, 'destroy']);
+        Route::get('/pemetaan/{id_pemetaan_fasilitas}', [FasilitasController::class, 'showByPemetaanFasilitas']);
+    });
+
     Route::prefix('pemetaan')->group(function () {
         // Pemetaan Tanah
         Route::get('/tanah/{tanahId}', [PemetaanTanahController::class, 'index']);
