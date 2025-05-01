@@ -116,6 +116,23 @@
             Route::get('/fasilitas/{id}', [InventarisController::class, 'showByFasilitas']);
         });
 
+    Route::prefix('pemetaan')->group(function () {
+        // Pemetaan Tanah
+        Route::get('/tanah/{tanahId}', [PemetaanTanahController::class, 'index']);
+        Route::post('/tanah/{tanahId}', [PemetaanTanahController::class, 'store']);
+        Route::get('/tanah-detail/{id}', [PemetaanTanahController::class, 'show']);
+        Route::put('/tanah/{id}', [PemetaanTanahController::class, 'update']);
+        Route::delete('/tanah/{id}', [PemetaanTanahController::class, 'destroy']);
+        Route::get('/tanah', [PemetaanTanahController::class, 'IndexAll']);
+    
+        // Pemetaan Fasilitas
+        Route::get('/fasilitas/{pemetaanTanahId}', [PemetaanFasilitasController::class, 'index']);
+        Route::post('/fasilitas/{pemetaanTanahId}', [PemetaanFasilitasController::class, 'store']);
+        Route::get('/fasilitas-detail/{id}', [PemetaanFasilitasController::class, 'show']);
+        Route::put('/fasilitas/{id}', [PemetaanFasilitasController::class, 'update']);
+        Route::delete('/fasilitas/{id}', [PemetaanFasilitasController::class, 'destroy']);
+        Route::get('/fasilitas', [PemetaanFasilitasController::class, 'indexAll']);
+    });
         Route::prefix('pemetaan')->group(function () {
             // Pemetaan Tanah
             Route::get('/tanah/{tanahId}', [PemetaanTanahController::class, 'index']);
