@@ -113,6 +113,7 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
         Route::get('/tanah-detail/{id}', [PemetaanTanahController::class, 'show']);
         Route::put('/tanah/{id}', [PemetaanTanahController::class, 'update']);
         Route::delete('/tanah/{id}', [PemetaanTanahController::class, 'destroy']);
+        Route::get('/tanah', [PemetaanTanahController::class, 'IndexAll']);
     
         // Pemetaan Fasilitas
         Route::get('/fasilitas/{pemetaanTanahId}', [PemetaanFasilitasController::class, 'index']);
@@ -120,6 +121,7 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
         Route::get('/fasilitas-detail/{id}', [PemetaanFasilitasController::class, 'show']);
         Route::put('/fasilitas/{id}', [PemetaanFasilitasController::class, 'update']);
         Route::delete('/fasilitas/{id}', [PemetaanFasilitasController::class, 'destroy']);
+        Route::get('/fasilitas', [PemetaanFasilitasController::class, 'indexAll']);
     });
 
     Route::post('/notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead']);
