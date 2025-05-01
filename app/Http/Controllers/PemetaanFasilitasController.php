@@ -178,11 +178,25 @@ class PemetaanFasilitasController extends Controller
 
     public function show($id)
     {
-        $fasilitas = PemetaanFasilitas::findOrFail($id);
-        return response()->json([
-            'status' => 'success',
-            'data' => $fasilitas
-        ]);
+        try {
+            $fasilitas = PemetaanFasilitas::with([
+                'pemetaanTanah',
+                'pemetaanTanah.tanah',
+                'user'
+            ])->findOrFail($id);
+    
+            return response()->json([
+                'status' => 'success',
+                'data' => $fasilitas
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error fetching pemetaan fasilitas detail: ' . $e->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal mengambil data pemetaan fasilitas',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function update(Request $request, $id)

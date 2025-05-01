@@ -13,6 +13,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\PemetaanTanahController;
 use App\Http\Controllers\PemetaanFasilitasController;
 use App\Http\Controllers\FasilitasController;
+use App\Http\Controllers\InventarisController;
 
 /*
 |--------------------------------------------------------------------------
@@ -24,8 +25,6 @@ use App\Http\Controllers\FasilitasController;
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 */
-
-// Route::resource('products', ProductController::class);
 
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -62,19 +61,17 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::delete('/tanah/{id}', [TanahController::class, 'destroy']);
     Route::put('/tanah/legalitas/{id}', [TanahController::class, 'updateLegalitas']);
 
-       // API Sertifikat Wakaf
+    // API Sertifikat Wakaf
     Route::get('/sertifikat', [sertifikatWakafController::class, 'index']);
     Route::get('/sertifikat/{id}', [sertifikatWakafController::class, 'show']);
     Route::post('/sertifikat', [sertifikatWakafController::class, 'store']);
     Route::put('/sertifikat/{id}', [sertifikatWakafController::class, 'update']);
-    
     Route::put('/sertifikat/jenissertifikat/{id}', [sertifikatWakafController::class, 'updateJenisSertifikat']);
     Route::put('/sertifikat/statuspengajuan/{id}', [sertifikatWakafController::class, 'updateStatusPengajuan']);
     Route::delete('/sertifikat/{id}', [sertifikatWakafController::class, 'destroy']);
     Route::get('/sertifikat/legalitas/{id}', [sertifikatWakafController::class, 'showLegalitas']);
     Route::get('/sertifikat/tanah/{id_tanah}', [sertifikatWakafController::class, 'getSertifikatByIdTanah']);
 
-    
     Route::get('/approvals', [ApprovalController::class, 'index']);
     Route::get('/approvals/{id}', [ApprovalController::class, 'show']);
     Route::post('/approvals/{id}/approve', [ApprovalController::class, 'approve']);
@@ -83,8 +80,9 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::post('/approvals/{id}/update/reject', [ApprovalController::class, 'rejectUpdate']);
     Route::get('/approvals/type/{type}', [ApprovalController::class, 'getByType']);
 
-    Route::get('/notifications', [NotificationController::class, 'index']); // Menampilkan notifikasi
-    Route::post('/notifications/mark-as-read/{id}', [NotificationController::class, 'markAsRead']); // Menandai notifikasi sebagai sudah dibaca
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::post('/notifications/mark-as-read/{id}', [NotificationController::class, 'markAsRead']);
+    Route::post('/notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead']);
 
     // API ActivityLog
     Route::get('/log-tanah', [ActivityLogController::class, 'logTanah']);
@@ -97,6 +95,7 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     
     Route::get('/dashboard/stats', [DashboardController::class, 'getDashboardStats']);
 
+    // Fasilitas Routes
     Route::prefix('fasilitas')->group(function () {
         Route::get('/', [FasilitasController::class, 'index']);
         Route::post('/', [FasilitasController::class, 'store']);
@@ -106,25 +105,34 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
         Route::get('/pemetaan/{id_pemetaan_fasilitas}', [FasilitasController::class, 'showByPemetaanFasilitas']);
     });
 
+    // Inventaris Routes
+    Route::prefix('inventaris')->group(function () {
+        Route::get('/', [InventarisController::class, 'index']);
+        Route::post('/', [InventarisController::class, 'store']);
+        Route::get('/{id}', [InventarisController::class, 'show']);
+        Route::put('/{id}', [InventarisController::class, 'update']);
+        Route::delete('/{id}', [InventarisController::class, 'destroy']);
+        Route::get('/fasilitas/{id}', [InventarisController::class, 'showByFasilitas']);
+    });
+
+    // Pemetaan Routes
     Route::prefix('pemetaan')->group(function () {
         // Pemetaan Tanah
+        Route::get('/tanah', [PemetaanTanahController::class, 'IndexAll']);
         Route::get('/tanah/{tanahId}', [PemetaanTanahController::class, 'index']);
         Route::post('/tanah/{tanahId}', [PemetaanTanahController::class, 'store']);
         Route::get('/tanah-detail/{id}', [PemetaanTanahController::class, 'show']);
         Route::put('/tanah/{id}', [PemetaanTanahController::class, 'update']);
         Route::delete('/tanah/{id}', [PemetaanTanahController::class, 'destroy']);
-        Route::get('/tanah', [PemetaanTanahController::class, 'IndexAll']);
     
         // Pemetaan Fasilitas
+        Route::get('/fasilitas', [PemetaanFasilitasController::class, 'indexAll']);
         Route::get('/fasilitas/{pemetaanTanahId}', [PemetaanFasilitasController::class, 'index']);
         Route::post('/fasilitas/{pemetaanTanahId}', [PemetaanFasilitasController::class, 'store']);
         Route::get('/fasilitas-detail/{id}', [PemetaanFasilitasController::class, 'show']);
         Route::put('/fasilitas/{id}', [PemetaanFasilitasController::class, 'update']);
         Route::delete('/fasilitas/{id}', [PemetaanFasilitasController::class, 'destroy']);
-        Route::get('/fasilitas', [PemetaanFasilitasController::class, 'indexAll']);
     });
-
-    Route::post('/notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead']);
 });
 
 Route::middleware('auth:api')->get('/user', function (Request $request) {
