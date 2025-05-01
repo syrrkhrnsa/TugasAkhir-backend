@@ -21,8 +21,34 @@ class PemetaanTanahController extends Controller
         ]);
     }
 
+    public function IndexAll()
+    {
+        $pemetaan = PemetaanTanah::with('tanah')->get();
+        return response()->json([
+            'status' => 'success',
+            'data' => $pemetaan
+        ]);
+    }
+
     // Metode untuk melihat detail pemetaan tanah tertentu tanpa login
     public function publicShow($id)
+    {
+        try {
+            $pemetaan = PemetaanTanah::with(['tanah', 'fasilitas'])->findOrFail($id);
+            return response()->json([
+                'status' => 'success',
+                'data' => $pemetaan
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Pemetaan tanah tidak ditemukan',
+                'error' => $e->getMessage()
+            ], 404);
+        }
+    }
+
+    public function ShowDetail($id)
     {
         try {
             $pemetaan = PemetaanTanah::with(['tanah', 'fasilitas'])->findOrFail($id);
