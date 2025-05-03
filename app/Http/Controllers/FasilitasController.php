@@ -18,6 +18,8 @@ class FasilitasController extends Controller
         return response()->json($fasilitas);
     }
 
+    
+
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -94,10 +96,23 @@ class FasilitasController extends Controller
     }
 
     public function show($id)
-    {
+{
+    try {
         $fasilitas = Fasilitas::with(['pemetaanFasilitas', 'tanah'])->findOrFail($id);
-        return response()->json($fasilitas);
+        
+        return response()->json([
+            "status" => "success",
+            "data" => $fasilitas
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            "status" => "error",
+            "message" => "Fasilitas tidak ditemukan",
+            "error" => $e->getMessage()
+        ], 404);
     }
+}
 
     public function showByPemetaanFasilitas($id_pemetaan_fasilitas)
     {
@@ -126,15 +141,19 @@ class FasilitasController extends Controller
         $data = $request->only(['catatan']);
 
         if ($request->hasFile('file_360')) {
-            $data['file_360'] = $request->file('file_360')->store('uploads/fasilitas/360');
-        }
-        if ($request->hasFile('file_gambar')) {
-            $data['file_gambar'] = $request->file('file_gambar')->store('uploads/fasilitas/gambar');
-        }
-        if ($request->hasFile('file_pdf')) {
-            $data['file_pdf'] = $request->file('file_pdf')->store('uploads/fasilitas/pdf');
+            $path360 = $request->file('file_360')->store('fasilitas/file_360', 'public');
+            $data['file_360'] = $path360;
         }
 
+        if ($request->hasFile('file_gambar')) {
+            $pathGambar = $request->file('file_gambar')->store('fasilitas/file_gambar', 'public');
+            $data['file_gambar'] = $pathGambar;
+        }
+
+        if ($request->hasFile('file_pdf')) {
+            $pathPdf = $request->file('file_pdf')->store('fasilitas/file_pdf', 'public');
+            $data['file_pdf'] = $pathPdf;
+        }
         $fasilitas->update($data);
 
         return response()->json($fasilitas);
