@@ -22,13 +22,14 @@ class Inventaris extends Model
         'satuan',
         'jumlah',
         'detail',
-        'deskripsi',
+        'waktu_perolehan',
         'kondisi',
         'catatan',
     ];
 
     protected $casts = [
         'jumlah' => 'integer',
+        'waktu_perolehan' => 'date',
     ];
 
     public function fasilitas()

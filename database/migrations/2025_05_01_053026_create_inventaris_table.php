@@ -15,7 +15,7 @@ return new class extends Migration {
             $table->string('satuan');
             $table->integer('jumlah')->default(1);
             $table->text('detail')->nullable();
-            $table->text('deskripsi')->nullable();
+            $table->date('waktu_perolehan')->nullable();
             $table->enum('kondisi', ['baik', 'rusak_ringan', 'rusak_berat', 'hilang'])->default('baik');
             $table->text('catatan')->nullable();
             $table->timestamps();
