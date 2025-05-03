@@ -39,7 +39,7 @@ class InventarisController extends Controller
             'satuan' => 'required|string|max:50',
             'jumlah' => 'required|integer|min:1',
             'detail' => 'nullable|string',
-            'deskripsi' => 'nullable|string',
+            'waktu_perolehan' => 'nullable|date',
             'kondisi' => 'required|in:baik,rusak_ringan,rusak_berat,hilang',
             'catatan' => 'nullable|string',
         ], [
@@ -51,6 +51,7 @@ class InventarisController extends Controller
             'jumlah.min' => 'Jumlah minimal 1',
             'kondisi.required' => 'Kondisi wajib diisi',
             'kondisi.in' => 'Kondisi tidak valid',
+            'waktu_perolehan.date' => 'Waktu perolehan harus berupa tanggal yang valid',
         ]);
 
         if ($validator->fails()) {
@@ -104,7 +105,7 @@ class InventarisController extends Controller
             'satuan' => 'sometimes|string|max:50',
             'jumlah' => 'sometimes|integer|min:1',
             'detail' => 'nullable|string',
-            'deskripsi' => 'nullable|string',
+            'waktu_perolehan' => 'nullable|date',
             'kondisi' => 'sometimes|in:baik,rusak_ringan,rusak_berat,hilang',
             'catatan' => 'nullable|string',
         ], [
@@ -114,6 +115,7 @@ class InventarisController extends Controller
             'jumlah.min' => 'Jumlah minimal 1',
             'kondisi.required' => 'Kondisi wajib diisi',
             'kondisi.in' => 'Kondisi tidak valid',
+            'waktu_perolehan.date' => 'Waktu perolehan harus berupa tanggal yang valid',
         ]);
 
         if ($validator->fails()) {
