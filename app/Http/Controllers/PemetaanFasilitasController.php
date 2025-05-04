@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
+
 
 class PemetaanFasilitasController extends Controller
 {
@@ -85,6 +87,67 @@ class PemetaanFasilitasController extends Controller
             'status' => 'success',
             'data' => $fasilitas
         ]);
+    }
+
+    public function getUserPemetaanFasilitas(Request $request, $userId)
+    {
+        try {
+            // Validasi jika user ID tidak disediakan
+            if (!$userId) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'User ID harus disediakan'
+                ], 400);
+            }
+            
+            // Ambil data pemetaan fasilitas oleh user dengan relasi pemetaan tanah
+            $pemetaanFasilitas = PemetaanFasilitas::where('id_user', $userId)
+                ->with(['pemetaanTanah', 'pemetaanTanah.tanah'])
+                ->get();
+            
+            return response()->json([
+                'status' => 'success',
+                'data' => $pemetaanFasilitas
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal mengambil data pemetaan fasilitas',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getUserPemetaanFasilitasDetail($userId, $idPemetaanFasilitas)
+    {
+        try {
+            // Validasi jika user ID tidak disediakan
+            if (!$userId) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'User ID harus disediakan'
+                ], 400);
+            }
+            
+            // Ambil data pemetaan fasilitas beserta relasi pemetaan tanah dan tanah
+            $pemetaanFasilitas = PemetaanFasilitas::where('id_pemetaan_fasilitas', $idPemetaanFasilitas)
+                ->where('id_user', $userId)
+                ->with(['pemetaanTanah', 'pemetaanTanah.tanah'])
+                ->firstOrFail();
+            
+            return response()->json([
+                'status' => 'success',
+                'data' => $pemetaanFasilitas
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Data pemetaan fasilitas tidak ditemukan atau tidak memiliki akses',
+                'error' => $e->getMessage()
+            ], 404);
+        }
     }
     
     public function index($pemetaanTanahId)
