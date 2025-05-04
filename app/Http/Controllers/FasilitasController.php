@@ -134,6 +134,38 @@ class FasilitasController extends Controller
     }
 
 
+    public function publicIndex()
+    {
+        $fasilitas = Fasilitas::with(['pemetaanFasilitas', 'tanah'])
+            ->whereHas('pemetaanFasilitas') // Pastikan ada relasi pemetaan
+            ->get();
+
+        return response()->json([
+            "status" => "success",
+            "data" => $fasilitas
+        ]);
+    }
+
+    public function publicShow($id)
+    {
+        $fasilitas = Fasilitas::with(['pemetaanFasilitas', 'tanah', 'inventaris'])
+            ->where('id_fasilitas', $id)
+            ->first();
+    
+        if (!$fasilitas) {
+            return response()->json([
+                "status" => "error",
+                "message" => "Fasilitas tidak ditemukan"
+            ], 404);
+        }
+    
+        return response()->json([
+            "status" => "success",
+            "data" => $fasilitas
+        ]);
+    }
+
+
     public function update(Request $request, $id)
     {
         $fasilitas = Fasilitas::findOrFail($id);

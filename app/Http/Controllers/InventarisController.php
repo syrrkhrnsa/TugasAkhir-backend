@@ -166,4 +166,26 @@ class InventarisController extends Controller
             ], 500);
         }
     }
+
+    public function publicShowByFasilitas($id)
+    {
+        $inventaris = Inventaris::where('id_fasilitas', $id)
+            ->select([
+                'id_inventaris',
+                'id_fasilitas',
+                'nama_barang',
+                'kode_barang',
+                'satuan',
+                'jumlah',
+                'kondisi',
+                'waktu_perolehan'
+            ])
+            ->get();
+    
+        return response()->json([
+            "status" => "success",
+            "data" => $inventaris
+        ]);
+    }
+
 }
