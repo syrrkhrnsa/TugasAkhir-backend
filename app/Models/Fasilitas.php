@@ -33,4 +33,10 @@ class Fasilitas extends Model
     {
         return $this->belongsTo(Tanah::class, 'id_tanah', 'id_tanah');
     }
+
+    public function inventaris()
+    {
+        return $this->hasMany(Inventaris::class, 'id_fasilitas', 'id_fasilitas');
+    }
+
 }
