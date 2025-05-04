@@ -13,6 +13,8 @@ use App\Observers\FasilitasObserver;
 use App\Models\PemetaanFasilitas;
 use App\Models\PemetaanTanah;
 use App\Models\Fasilitas;
+use App\Models\Inventaris;
+use App\Observers\InventarisObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -38,5 +40,6 @@ class AppServiceProvider extends ServiceProvider
         PemetaanTanah::observe(PemetaanTanahObserver::class);
         PemetaanFasilitas::observe(PemetaanFasilitasObserver::class);
         Fasilitas::observe(FasilitasObserver::class);
+        Inventaris::observe(InventarisObserver::class);
     }
 }

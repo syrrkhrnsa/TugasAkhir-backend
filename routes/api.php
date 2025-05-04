@@ -128,6 +128,8 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
         Route::get('/tanah-detail/{id}', [PemetaanTanahController::class, 'show']);
         Route::put('/tanah/{id}', [PemetaanTanahController::class, 'update']);
         Route::delete('/tanah/{id}', [PemetaanTanahController::class, 'destroy']);
+        Route::get('/user/pemetaan-tanah/{userId}', [PemetaanTanahController::class, 'getUserPemetaanTanah']);
+    Route::get('/user/pemetaan-tanah/{userId}/{idPemetaanTanah}', [PemetaanTanahController::class, 'getUserPemetaanTanahDetail']);
     
         // Pemetaan Fasilitas
         Route::get('/fasilitas', [PemetaanFasilitasController::class, 'indexAll']);
@@ -136,6 +138,8 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
         Route::get('/fasilitas-detail/{id}', [PemetaanFasilitasController::class, 'show']);
         Route::put('/fasilitas/{id}', [PemetaanFasilitasController::class, 'update']);
         Route::delete('/fasilitas/{id}', [PemetaanFasilitasController::class, 'destroy']);
+        Route::get('/user/pemetaan-fasilitas/{userId}', [PemetaanFasilitasController::class, 'getUserPemetaanFasilitas']);
+        Route::get('/user/pemetaan-fasilitas/{userId}/{idPemetaanFasilitas}', [PemetaanFasilitasController::class, 'getUserPemetaanFasilitasDetail']);
     });
 });
 

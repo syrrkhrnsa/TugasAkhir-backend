@@ -223,6 +223,8 @@ class TanahController extends Controller
                 'lebar_tanah' => 'nullable|string',
                 'catatan' => 'nullable|string',
                 'alamat_wakif' => 'nullable|string',
+                'latitude' => 'nullable|numeric',
+                'longitude' => 'nullable|numeric',
             ]);
 
             if ($validator->fails()) {
@@ -258,13 +260,23 @@ class TanahController extends Controller
                 'lebar_tanah' => $request->lebar_tanah,
                 'catatan' => $request->catatan,
                 'alamat_wakif' => $request->alamat_wakif,
+                'latitude' => $request->latitude,
+                'longitude' => $request->longitude,
             ];
+
+            // Jika ada latitude dan longitude, buat koordinat
+            if ($request->latitude && $request->longitude) {
+                $data['koordinat'] = [
+                    'type' => 'Point',
+                    'coordinates' => [$request->longitude, $request->latitude]
+                ];
+            }
 
             if ($user->role_id === $rolePimpinanJamaah) {
                 $approval = Approval::create([
                     'user_id' => $user->id,
                     'type' => 'tanah',
-                    'data_id' => Str::uuid(),
+                    'data_id' => $data['id_tanah'],
                     'data' => json_encode($data),
                     'status' => 'ditinjau',
                 ]);
@@ -316,6 +328,8 @@ class TanahController extends Controller
                 'lebar_tanah' => 'nullable|string',
                 'catatan' => 'nullable|string',
                 'alamat_wakif' => 'nullable|string',
+                'latitude' => 'nullable|numeric',
+                'longitude' => 'nullable|numeric',
             ]);
 
             if ($validator->fails()) {
@@ -357,7 +371,22 @@ class TanahController extends Controller
                 'lebar_tanah' => $request->lebar_tanah ?? $tanah->lebar_tanah,
                 'catatan' => $request->catatan ?? $tanah->catatan,
                 'alamat_wakif' => $request->alamat_wakif ?? $tanah->alamat_wakif,
+                'latitude' => $request->latitude ?? $tanah->latitude,
+                'longitude' => $request->longitude ?? $tanah->longitude,
             ];
+
+            // Update koordinat jika ada perubahan latitude/longitude
+            if ($request->has('latitude') || $request->has('longitude')) {
+                $lat = $request->latitude ?? $tanah->latitude;
+                $lng = $request->longitude ?? $tanah->longitude;
+                
+                if ($lat && $lng) {
+                    $data['koordinat'] = [
+                        'type' => 'Point',
+                        'coordinates' => [$lng, $lat]
+                    ];
+                }
+            }
 
             if ($user->role_id === $rolePimpinanJamaah) {
                 $tanah->update(['status' => 'ditinjau']);
@@ -396,6 +425,45 @@ class TanahController extends Controller
                 "status" => "error",
                 "message" => "Terjadi kesalahan saat memperbarui data",
                 "error" => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function searchByLocation(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'latitude' => 'required|numeric',
+                'longitude' => 'required|numeric',
+                'radius' => 'required|numeric|min:0', // dalam meter
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    "status" => "error",
+                    "message" => "Validasi gagal",
+                    "errors" => $validator->errors()
+                ], Response::HTTP_BAD_REQUEST);
+            }
+
+            $tanah = Tanah::where('status', 'disetujui')
+                ->nearby(
+                    $request->latitude,
+                    $request->longitude,
+                    $request->radius
+                )
+                ->get();
+
+            return response()->json([
+                "status" => "success",
+                "message" => "Pencarian tanah berdasarkan lokasi berhasil",
+                "data" => $tanah
+            ], Response::HTTP_OK);
+        } catch (\Exception $e) {
+            Log::error('Error pencarian tanah berdasarkan lokasi: ' . $e->getMessage());
+            return response()->json([
+                "status" => "error",
+                "message" => "Terjadi kesalahan server"
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
