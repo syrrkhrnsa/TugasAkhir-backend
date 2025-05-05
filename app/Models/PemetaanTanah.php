@@ -24,7 +24,8 @@ class PemetaanTanah extends Model
         'nama_pemetaan',
         'keterangan',
         'jenis_geometri',
-        'geometri'
+        'geometri',
+        'luas_tanah',
     ];
 
     protected $casts = [

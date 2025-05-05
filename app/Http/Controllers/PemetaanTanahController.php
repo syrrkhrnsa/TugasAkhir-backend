@@ -167,11 +167,9 @@ class PemetaanTanahController extends Controller
         try {
             $tanah = Tanah::findOrFail($tanahId);
 
-            // Debug sebelum penyimpanan
-            Log::debug('Before Save', [
-                'geometri_input' => $request->geometri,
-                'decoded' => json_decode($request->geometri, true)
-            ]);
+            // Calculate area from the geometry
+            $geojson = json_decode($request->geometri, true);
+            $area = $this->calculateAreaFromGeoJSON($geojson);
 
             $pemetaan = new PemetaanTanah([
                 'id_pemetaan_tanah' => Str::uuid(),
@@ -180,28 +178,27 @@ class PemetaanTanahController extends Controller
                 'nama_pemetaan' => $request->nama_pemetaan,
                 'keterangan' => $request->keterangan,
                 'jenis_geometri' => $request->jenis_geometri,
-                'geometri' => $request->geometri // Langsung gunakan string JSON
+                'luas_tanah' => $area, // Store calculated area
+                'geometri' => $request->geometri
             ]);
 
             $pemetaan->save();
 
             DB::commit();
 
-            // Debug setelah penyimpanan
-            Log::debug('After Save', [
-                'saved_geometri' => $pemetaan->geometri
-            ]);
-
             return response()->json([
                 'status' => 'success',
                 'message' => 'Pemetaan tanah berhasil dibuat',
-                'data' => $pemetaan
+                'data' => $pemetaan,
+                'calculated_area' => $area,
+                'original_area' => $tanah->luasTanah,
+                'difference' => $tanah->luasTanah ? abs($tanah->luasTanah - $area) : null,
+                'percentage_diff' => $tanah->luasTanah ? (abs($tanah->luasTanah - $area) / $tanah->luasTanah) * 100 : null
             ], 201);
 
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Store Pemetaan Error', [
-                'request' => $request->all(),
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -210,6 +207,46 @@ class PemetaanTanahController extends Controller
                 'message' => 'Gagal membuat pemetaan tanah',
                 'error' => $e->getMessage()
             ], 500);
+        }
+    }
+
+    private function calculateAreaFromGeoJSON($geojson)
+    {
+        try {
+            // For Polygon
+            if ($geojson['type'] === 'Polygon') {
+                $coordinates = $geojson['coordinates'][0]; // Get the outer ring
+                $area = 0;
+                $n = count($coordinates);
+                
+                if ($n > 2) {
+                    for ($i = 0; $i < $n; $i++) {
+                        $j = ($i + 1) % $n;
+                        $xi = $coordinates[$i][0];
+                        $yi = $coordinates[$i][1];
+                        $xj = $coordinates[$j][0];
+                        $yj = $coordinates[$j][1];
+                        
+                        $area += ($xi * $yj) - ($xj * $yi);
+                    }
+                    
+                    $area = abs($area / 2);
+                    
+                    // Convert from degree² to m² (approximate)
+                    // Note: This is a simplified calculation and may not be accurate for large areas
+                    // For more accurate results, consider using a library like turf.js or PostGIS functions
+                    $earthCircumference = 40075000; // meters
+                    $degreesToMeters = $earthCircumference / 360;
+                    $area = $area * pow($degreesToMeters, 2);
+                    
+                    return round($area, 2);
+                }
+            }
+            
+            return 0;
+        } catch (\Exception $e) {
+            Log::error('Area calculation error', ['error' => $e->getMessage()]);
+            return 0;
         }
     }
 
