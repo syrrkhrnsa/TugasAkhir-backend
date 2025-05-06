@@ -38,6 +38,39 @@ Route::get('/certificate/{filename}', [MinioUploadController::class, 'getCertifi
 Route::get('/certificate/view/{filename}', [MinioUploadController::class, 'viewCertificate']); // Untuk lihat URL
 Route::delete('/certificate/delete/{filename}', [MinioUploadController::class, 'deleteCertificate']); // Untuk delete
 
+Route::get('/sertifikat/{id}/download', [sertifikatWakafController::class, 'downloadDokumen']);
+    Route::get('/sertifikat/{id}/view', [sertifikatWakafController::class, 'viewDokumen']);
+
+    // Public route untuk akses GeoTIFF
+Route::get('/geotiff/{filename}', function ($filename) {
+    $path = storage_path('app/geotiffs/'.urldecode($filename));
+    
+    if (!file_exists($path)) {
+        return response()->json(['error' => 'File not found'], 404);
+    }
+    
+    // Validate it's actually a TIFF file
+    $mime = mime_content_type($path);
+    if (!in_array($mime, ['image/tiff', 'image/tif'])) {
+        return response()->json(['error' => 'Invalid file type'], 400);
+    }
+
+    return response()->file($path, [
+        'Content-Type' => 'image/tiff',
+        'Content-Disposition' => 'inline',
+        'Cache-Control' => 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0',
+        'Pragma' => 'no-cache',
+        'Expires' => '0'
+    ]);
+})->where('filename', '.*');
+
+Route::get('/geotiff-list', function () {
+    $files = glob(storage_path('app/geotiffs/*.{tif,tiff}'), GLOB_BRACE);
+    $filenames = array_map('basename', $files);
+    return response()->json($filenames);
+});
+
+
 // Protected routes
 Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -52,17 +85,20 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::delete('/tanah/{id}', [TanahController::class, 'destroy']);
     Route::put('/tanah/legalitas/{id}', [TanahController::class, 'updateLegalitas']);
 
-       // API Sertifikat Wakaf
+    // API Sertifikat Wakaf dengan Minio Integration
     Route::get('/sertifikat', [sertifikatWakafController::class, 'index']);
     Route::get('/sertifikat/{id}', [sertifikatWakafController::class, 'show']);
     Route::post('/sertifikat', [sertifikatWakafController::class, 'store']);
     Route::put('/sertifikat/{id}', [sertifikatWakafController::class, 'update']);
-    
     Route::put('/sertifikat/jenissertifikat/{id}', [sertifikatWakafController::class, 'updateJenisSertifikat']);
     Route::put('/sertifikat/statuspengajuan/{id}', [sertifikatWakafController::class, 'updateStatusPengajuan']);
     Route::delete('/sertifikat/{id}', [sertifikatWakafController::class, 'destroy']);
     Route::get('/sertifikat/legalitas/{id}', [sertifikatWakafController::class, 'showLegalitas']);
     Route::get('/sertifikat/tanah/{id_tanah}', [sertifikatWakafController::class, 'getSertifikatByIdTanah']);
+
+    
+    Route::post('/upload-dokumen', [sertifikatWakafController::class, 'uploadDokumen']);
+    Route::delete('/delete-dokumen', [sertifikatWakafController::class, 'deleteDokumen']);
 
     
     Route::get('/approvals', [ApprovalController::class, 'index']);
@@ -113,4 +149,17 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
 
 Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();
+});
+
+// Temporarily add this route to test MinIO connection
+Route::get('/test-minio', function() {
+    try {
+        Storage::disk('minio')->put('test.txt', 'Test content');
+        return response()->json(['success' => true]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => $e->getMessage(),
+            'config' => config('filesystems.disks.minio')
+        ], 500);
+    }
 });
