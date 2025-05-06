@@ -9,10 +9,147 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 
 class PemetaanFasilitasController extends Controller
 {
+    public function publicIndex()
+    {
+        $fasilitas = PemetaanFasilitas::with('pemetaanTanah')->get();
+        return response()->json([
+            'status' => 'success',
+            'data' => $fasilitas
+        ]);
+    }
+
+    public function IndexAll()
+    {
+        $fasilitas = PemetaanFasilitas::with('pemetaanTanah')->get();
+        return response()->json([
+            'status' => 'success',
+            'data' => $fasilitas
+        ]);
+    }
+
+    // Metode untuk melihat detail pemetaan fasilitas tertentu tanpa login
+    public function publicShow($id)
+    {
+        try {
+            $fasilitas = PemetaanFasilitas::with('pemetaanTanah')->findOrFail($id);
+            return response()->json([
+                'status' => 'success',
+                'data' => $fasilitas
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Pemetaan fasilitas tidak ditemukan',
+                'error' => $e->getMessage()
+            ], 404);
+        }
+    }
+
+    public function ShowDetail($id)
+    {
+        try {
+            $fasilitas = PemetaanFasilitas::with('pemetaanTanah')->findOrFail($id);
+            return response()->json([
+                'status' => 'success',
+                'data' => $fasilitas
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Pemetaan fasilitas tidak ditemukan',
+                'error' => $e->getMessage()
+            ], 404);
+        }
+    }
+
+    // Metode untuk melihat semua fasilitas berdasarkan id pemetaan tanah tertentu tanpa login
+    public function publicByPemetaanTanah($pemetaanTanahId)
+    {
+        $fasilitas = PemetaanFasilitas::where('id_pemetaan_tanah', $pemetaanTanahId)->get();
+        return response()->json([
+            'status' => 'success',
+            'data' => $fasilitas
+        ]);
+    }
+
+    // Metode publik untuk mendapatkan semua fasilitas berdasarkan jenis
+    public function publicByJenis($jenisFasilitas)
+    {
+        $fasilitas = PemetaanFasilitas::where('jenis_fasilitas', $jenisFasilitas)
+                                      ->with('pemetaanTanah')
+                                      ->get();
+        return response()->json([
+            'status' => 'success',
+            'data' => $fasilitas
+        ]);
+    }
+
+    public function getUserPemetaanFasilitas(Request $request, $userId)
+    {
+        try {
+            // Validasi jika user ID tidak disediakan
+            if (!$userId) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'User ID harus disediakan'
+                ], 400);
+            }
+            
+            // Ambil data pemetaan fasilitas oleh user dengan relasi pemetaan tanah
+            $pemetaanFasilitas = PemetaanFasilitas::where('id_user', $userId)
+                ->with(['pemetaanTanah', 'pemetaanTanah.tanah'])
+                ->get();
+            
+            return response()->json([
+                'status' => 'success',
+                'data' => $pemetaanFasilitas
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal mengambil data pemetaan fasilitas',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getUserPemetaanFasilitasDetail($userId, $idPemetaanFasilitas)
+    {
+        try {
+            // Validasi jika user ID tidak disediakan
+            if (!$userId) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'User ID harus disediakan'
+                ], 400);
+            }
+            
+            // Ambil data pemetaan fasilitas beserta relasi pemetaan tanah dan tanah
+            $pemetaanFasilitas = PemetaanFasilitas::where('id_pemetaan_fasilitas', $idPemetaanFasilitas)
+                ->where('id_user', $userId)
+                ->with(['pemetaanTanah', 'pemetaanTanah.tanah'])
+                ->firstOrFail();
+            
+            return response()->json([
+                'status' => 'success',
+                'data' => $pemetaanFasilitas
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Data pemetaan fasilitas tidak ditemukan atau tidak memiliki akses',
+                'error' => $e->getMessage()
+            ], 404);
+        }
+    }
+    
     public function index($pemetaanTanahId)
     {
         $fasilitas = PemetaanFasilitas::where('id_pemetaan_tanah', $pemetaanTanahId)->get();
@@ -25,7 +162,8 @@ class PemetaanFasilitasController extends Controller
     public function store(Request $request, $pemetaanTanahId)
     {
         $validator = Validator::make($request->all(), [
-            'jenis_fasilitas' => 'required|string',
+            'jenis_fasilitas' => 'required|string|in:Bergerak,Tidak Bergerak',
+            'kategori_fasilitas' => 'required|string|max:255',
             'nama_fasilitas' => 'required|string|max:255',
             'jenis_geometri' => 'required|string|in:POINT,LINESTRING,POLYGON',
             'geometri' => 'required|json',
@@ -55,6 +193,7 @@ class PemetaanFasilitasController extends Controller
                 'id_pemetaan_tanah' => $pemetaanTanahId,
                 'id_user' => auth()->id(),
                 'jenis_fasilitas' => $request->jenis_fasilitas,
+                'kategori_fasilitas' => $request->kategori_fasilitas,
                 'nama_fasilitas' => $request->nama_fasilitas,
                 'keterangan' => $request->keterangan,
                 'jenis_geometri' => $request->jenis_geometri,
@@ -102,20 +241,36 @@ class PemetaanFasilitasController extends Controller
 
     public function show($id)
     {
-        $fasilitas = PemetaanFasilitas::findOrFail($id);
-        return response()->json([
-            'status' => 'success',
-            'data' => $fasilitas
-        ]);
+        try {
+            $fasilitas = PemetaanFasilitas::with([
+                'pemetaanTanah',
+                'pemetaanTanah.tanah',
+                'user'
+            ])->findOrFail($id);
+    
+            return response()->json([
+                'status' => 'success',
+                'data' => $fasilitas
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error fetching pemetaan fasilitas detail: ' . $e->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal mengambil data pemetaan fasilitas',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function update(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
-            'jenis_fasilitas' => 'sometimes|string',
+            'jenis_fasilitas' => 'sometimes|string|in:Bergerak,Tidak Bergerak',
+            'kategori_fasilitas' => 'sometimes|string|max:255',
             'nama_fasilitas' => 'sometimes|string',
             'jenis_geometri' => 'sometimes|string|in:POINT,LINESTRING,POLYGON',
             'geometri' => 'sometimes|json',
+            'keterangan' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -131,6 +286,7 @@ class PemetaanFasilitasController extends Controller
 
             $updateData = [
                 'jenis_fasilitas' => $request->jenis_fasilitas ?? $fasilitas->jenis_fasilitas,
+                'kategori_fasilitas' => $request->kategori_fasilitas ?? $fasilitas->kategori_fasilitas,
                 'nama_fasilitas' => $request->nama_fasilitas ?? $fasilitas->nama_fasilitas,
                 'keterangan' => $request->keterangan ?? $fasilitas->keterangan,
             ];

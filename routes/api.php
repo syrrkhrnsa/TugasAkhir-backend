@@ -13,6 +13,8 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\PemetaanTanahController;
 use App\Http\Controllers\PemetaanFasilitasController;
 use App\Http\Controllers\MinioUploadController;
+use App\Http\Controllers\FasilitasController;
+use App\Http\Controllers\InventarisController;
 
 /*
 |--------------------------------------------------------------------------
@@ -25,13 +27,30 @@ use App\Http\Controllers\MinioUploadController;
 |
 */
 
-// Route::resource('products', ProductController::class);
-
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login'])->name('login');
-Route::get('/tanah/public', [TanahController::class, 'publicIndex']);
+
+Route::get('tanah/public', [TanahController::class, 'publicIndex']);
+Route::get('tanah/public/{id}', [TanahController::class, 'publicShow']);
+Route::get('tanah/search/public', [TanahController::class, 'publicSearch']);
+Route::get('tanah/jenis/{jenisTanah}/public', [TanahController::class, 'publicByJenis']);
+Route::get('tanah/pimpinan/{namaPimpinan}/public', [TanahController::class, 'publicByPimpinan']);
+
 Route::get('/sertifikat/public', [sertifikatWakafController::class, 'publicIndex']);
+
+Route::get('pemetaan/public', [PemetaanTanahController::class, 'publicIndex']);
+Route::get('pemetaan/public/{id}', [PemetaanTanahController::class, 'publicShow']);
+Route::get('tanah/{tanahId}/pemetaan/public', [PemetaanTanahController::class, 'publicByTanah']);
+
+Route::get('fasilitas/public', [PemetaanFasilitasController::class, 'publicIndex']);
+Route::get('fasilitas/public/{id}', [PemetaanFasilitasController::class, 'publicShow']);
+Route::get('pemetaan/{pemetaanTanahId}/fasilitas/public', [PemetaanFasilitasController::class, 'publicByPemetaanTanah']);
+Route::get('fasilitas/jenis/{jenisFasilitas}/public', [PemetaanFasilitasController::class, 'publicByJenis']);
+
+Route::get('fasilitas/detail/public', [FasilitasController::class, 'publicIndex']);
+Route::get('fasilitas/detail/public/{id}', [FasilitasController::class, 'publicShow']);
+Route::get('inventaris/fasilitas/{id}/public', [InventarisController::class, 'publicShowByFasilitas']);
 
 Route::post('/upload-minio', [MinioUploadController::class, 'upload']);
 Route::get('/certificate/{filename}', [MinioUploadController::class, 'getCertificate']); // Untuk download
@@ -85,7 +104,7 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::delete('/tanah/{id}', [TanahController::class, 'destroy']);
     Route::put('/tanah/legalitas/{id}', [TanahController::class, 'updateLegalitas']);
 
-    // API Sertifikat Wakaf dengan Minio Integration
+       // API Sertifikat Wakaf
     Route::get('/sertifikat', [sertifikatWakafController::class, 'index']);
     Route::get('/sertifikat/{id}', [sertifikatWakafController::class, 'show']);
     Route::post('/sertifikat', [sertifikatWakafController::class, 'store']);
@@ -109,36 +128,62 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::post('/approvals/{id}/update/reject', [ApprovalController::class, 'rejectUpdate']);
     Route::get('/approvals/type/{type}', [ApprovalController::class, 'getByType']);
 
-    Route::get('/notifications', [NotificationController::class, 'index']); // Menampilkan notifikasi
-    Route::post('/notifications/mark-as-read/{id}', [NotificationController::class, 'markAsRead']); // Menandai notifikasi sebagai sudah dibaca
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::post('/notifications/mark-as-read/{id}', [NotificationController::class, 'markAsRead']);
+    Route::post('/notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead']);
 
     // API ActivityLog
     Route::get('/log-tanah', [ActivityLogController::class, 'logTanah']);
     Route::get('/log-sertifikat', [ActivityLogController::class, 'logSertifikat']);
     Route::get('/log-status', [ActivityLogController::class, 'logStatus']);
     Route::get('/log-user/{userId}', [ActivityLogController::class, 'logByUser']);
-    // Tanah ID specific logs
     Route::get('/log-tanah/{tanahId}', [ActivityLogController::class, 'logByTanahId']);
-    
-    // Sertifikat ID specific logs
     Route::get('/log-sertifikat/{sertifikatId}', [ActivityLogController::class, 'logBySertifikatId']);
+    Route::get('/log-sertifikat-by-tanah/{tanahId}', [ActivityLogController::class, 'logSertifikatByTanahId']);
     
     Route::get('/dashboard/stats', [DashboardController::class, 'getDashboardStats']);
 
+    // Fasilitas Routes
+    Route::prefix('fasilitas')->group(function () {
+        Route::get('/', [FasilitasController::class, 'index']);
+        Route::post('/', [FasilitasController::class, 'store']);
+        Route::get('/{id}', [FasilitasController::class, 'show']);
+        Route::put('/{id}', [FasilitasController::class, 'update']);
+        Route::delete('/{id}', [FasilitasController::class, 'destroy']);
+        Route::get('/pemetaan/{id_pemetaan_fasilitas}', [FasilitasController::class, 'showByPemetaanFasilitas']);
+    });
+
+    // Inventaris Routes
+    Route::prefix('inventaris')->group(function () {
+        Route::get('/', [InventarisController::class, 'index']);
+        Route::post('/', [InventarisController::class, 'store']);
+        Route::get('/{id}', [InventarisController::class, 'show']);
+        Route::put('/{id}', [InventarisController::class, 'update']);
+        Route::delete('/{id}', [InventarisController::class, 'destroy']);
+        Route::get('/fasilitas/{id}', [InventarisController::class, 'showByFasilitas']);
+    });
+
+    // Pemetaan Routes
     Route::prefix('pemetaan')->group(function () {
         // Pemetaan Tanah
+        Route::get('/tanah', [PemetaanTanahController::class, 'IndexAll']);
         Route::get('/tanah/{tanahId}', [PemetaanTanahController::class, 'index']);
         Route::post('/tanah/{tanahId}', [PemetaanTanahController::class, 'store']);
         Route::get('/tanah-detail/{id}', [PemetaanTanahController::class, 'show']);
         Route::put('/tanah/{id}', [PemetaanTanahController::class, 'update']);
         Route::delete('/tanah/{id}', [PemetaanTanahController::class, 'destroy']);
+        Route::get('/user/pemetaan-tanah/{userId}', [PemetaanTanahController::class, 'getUserPemetaanTanah']);
+    Route::get('/user/pemetaan-tanah/{userId}/{idPemetaanTanah}', [PemetaanTanahController::class, 'getUserPemetaanTanahDetail']);
     
         // Pemetaan Fasilitas
+        Route::get('/fasilitas', [PemetaanFasilitasController::class, 'indexAll']);
         Route::get('/fasilitas/{pemetaanTanahId}', [PemetaanFasilitasController::class, 'index']);
         Route::post('/fasilitas/{pemetaanTanahId}', [PemetaanFasilitasController::class, 'store']);
         Route::get('/fasilitas-detail/{id}', [PemetaanFasilitasController::class, 'show']);
         Route::put('/fasilitas/{id}', [PemetaanFasilitasController::class, 'update']);
         Route::delete('/fasilitas/{id}', [PemetaanFasilitasController::class, 'destroy']);
+        Route::get('/user/pemetaan-fasilitas/{userId}', [PemetaanFasilitasController::class, 'getUserPemetaanFasilitas']);
+        Route::get('/user/pemetaan-fasilitas/{userId}/{idPemetaanFasilitas}', [PemetaanFasilitasController::class, 'getUserPemetaanFasilitasDetail']);
     });
 
 

@@ -197,5 +197,55 @@ class ActivityLogController extends Controller
     return response()->json($logs);
 }
 
+public function logSertifikatByTanahId($tanahId)
+{
+    // Normalize UUID
+    $normalizedId = strtolower(trim($tanahId, '"\' '));
+
+    // Validate UUID format
+    if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/', $normalizedId)) {
+        return response()->json([
+            'error' => 'Format ID tanah tidak valid',
+            'received_id' => $tanahId,
+            'normalized_id' => $normalizedId
+        ], 400);
+    }
+
+    // Pertama, dapatkan semua sertifikat yang terkait dengan tanah ini
+    $sertifikatIds = Sertifikat::where('id_tanah', $normalizedId)
+        ->pluck('id_sertifikat')
+        ->toArray();
+
+    if (empty($sertifikatIds)) {
+        return response()->json([
+            'error' => 'Tidak ada sertifikat terkait tanah ini',
+            'tanah_id' => $normalizedId
+        ], 404);
+    }
+
+    // Kemudian dapatkan log aktivitas untuk sertifikat-sertifikat tersebut
+    $logs = ActivityLog::where('model_type', 'App\\Models\\Sertifikat')
+        ->whereIn('model_id', $sertifikatIds)
+        ->with('user')
+        ->orderBy('created_at', 'desc')
+        ->get()
+        ->map(function ($log) {
+            $changes = is_string($log->changes) ?
+                json_decode($log->changes, true) ?? ['raw' => $log->changes] :
+                $log->changes;
+
+            return [
+                'id' => $log->id,
+                'model_id' => $log->model_id,
+                'nama_user' => $log->user->name ?? 'Unknown',
+                'aksi' => ucfirst($log->action),
+                'perubahan' => $changes,
+                'waktu' => $log->created_at->format('H:i:s'),
+                'tanggal' => $log->created_at->format('Y-m-d'),
+            ];
+        });
+
+    return response()->json($logs);
+}
 
 }
