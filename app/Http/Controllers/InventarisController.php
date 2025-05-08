@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Inventaris;
+use App\Models\Fasilitas;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
@@ -186,6 +187,47 @@ class InventarisController extends Controller
             "status" => "success",
             "data" => $inventaris
         ]);
+    }
+
+    public function publicsShowByFasilitas($id_pemetaan_fasilitas)
+    {
+        try {
+            // Cari fasilitas berdasarkan id_pemetaan_fasilitas
+            $fasilitas = Fasilitas::where('id_pemetaan_fasilitas', $id_pemetaan_fasilitas)->first();
+            
+            if (!$fasilitas) {
+                return response()->json([
+                    "status" => "error",
+                    "message" => "Fasilitas tidak ditemukan"
+                ], 404);
+            }
+
+            // Ambil inventaris berdasarkan id_fasilitas
+            $inventaris = Inventaris::where('id_fasilitas', $fasilitas->id_fasilitas)
+                ->select([
+                    'id_inventaris',
+                    'id_fasilitas',
+                    'nama_barang',
+                    'kode_barang',
+                    'satuan',
+                    'jumlah',
+                    'kondisi',
+                    'waktu_perolehan'
+                ])
+                ->get();
+            
+            return response()->json([
+                "status" => "success",
+                "data" => $inventaris
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                "status" => "error",
+                "message" => "Terjadi kesalahan saat mengambil data inventaris",
+                "error" => $e->getMessage()
+            ], 500);
+        }
     }
 
 }
