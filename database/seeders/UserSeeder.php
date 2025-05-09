@@ -22,7 +22,7 @@ class UserSeeder extends Seeder
             [
                 'id' => '550e8400-e29b-41d4-a716-446655440001', // UUID statis
                 'name' => 'Pimpinan Jamaah',
-                'username' => 'pimpinan_jamaah',
+                'username' => 'pimpinanjamaah',
                 'email' => 'pimpinanjamaah1@example.com',
                 'password' => Hash::make('12345678'),
                 'role_id' => $roles['Pimpinan Jamaah'] ?? null,
@@ -32,7 +32,7 @@ class UserSeeder extends Seeder
             [
                 'id' => '550e8400-e29b-41d4-a716-446655440002', // UUID statis
                 'name' => 'Pimpinan Jamaah2',
-                'username' => 'pimpinan_jamaah2',
+                'username' => 'pimpinanjamaah2',
                 'email' => 'pimpinanjamaah2@example.com',
                 'password' => Hash::make('12345678'),
                 'role_id' => $roles['Pimpinan Jamaah'] ?? null,
@@ -42,7 +42,7 @@ class UserSeeder extends Seeder
             [
                 'id' => '550e8400-e29b-41d4-a716-446655440003', // UUID statis
                 'name' => 'Pimpinan Cabang',
-                'username' => 'pimpinan_cabang',
+                'username' => 'pimpinancabang',
                 'email' => 'cabang@example.com',
                 'password' => Hash::make('12345678'),
                 'role_id' => $roles['Pimpinan Cabang'] ?? null,
@@ -52,7 +52,7 @@ class UserSeeder extends Seeder
             [
                 'id' => '550e8400-e29b-41d4-a716-446655440004', // UUID statis
                 'name' => 'Bidgar Wakaf',
-                'username' => 'bidgar_wakaf',
+                'username' => 'bidgarwakaf',
                 'email' => 'wakaf@example.com',
                 'password' => Hash::make('12345678'),
                 'role_id' => $roles['Bidgar Wakaf'] ?? null,

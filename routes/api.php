@@ -52,6 +52,7 @@ Route::get('fasilitas/detail/public', [FasilitasController::class, 'publicIndex'
 Route::get('fasilitas/detail/publics/{id}', [FasilitasController::class, 'publicShow']);
 Route::get('fasilitas/detail/public/{id}', [FasilitasController::class, 'publicShowDetail']);
 Route::get('inventaris/fasilitas/{id}/public', [InventarisController::class, 'publicShowByFasilitas']);
+Route::get('/datauser', [UserController::class, 'datauser']);
 Route::get('inventaris/fasilitas/{id}/public/detail', [InventarisController::class, 'publicsShowByFasilitas']);
 
 // Protected routes

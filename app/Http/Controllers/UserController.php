@@ -6,6 +6,8 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
@@ -53,4 +55,58 @@ class UserController extends Controller
         // Mengembalikan data pengguna dalam format JSON
         return response()->json($user);
     }
+
+    public function datauser(): JsonResponse
+{
+    $users = [
+        [
+            "username" => "admin",
+            "password" => Hash::make('admin123'),
+            "nama_jamaah" => "CINTAASIH",
+            "name_role" => "Super Admin"
+        ],
+        [
+            "username" => "testUser",
+            "password" => Hash::make('user123'),
+            "nama_jamaah" => "CIHAMERANG",
+            "name_role" => "Pimpinan Jamaah"
+        ],
+        [
+            "username" => "testBendahara",
+            "password" => Hash::make('bendahara123'),
+            "nama_jamaah" => null,
+            "name_role" => "Bendahara"
+        ],
+        [
+            "username" => "pjPasirJati",
+            "password" => Hash::make('pasirjati123'),
+            "nama_jamaah" => "PASIR JATI",
+            "name_role" => "Pimpinan Jamaah"
+        ],
+        [
+            "username" => "pjTaraju",
+            "password" => Hash::make('taraju123'),
+            "nama_jamaah" => "TARAJU",
+            "name_role" => "Pimpinan Jamaah"
+        ],
+        [
+            "username" => "pjSindangsari",
+            "password" => Hash::make('sindangsari123'),
+            "nama_jamaah" => "SINDANGSARI",
+            "name_role" => "Pimpinan Jamaah"
+        ],
+        [
+            "username" => "admnWakaf",
+            "password" => Hash::make('wakaf1234'),
+            "nama_jamaah" => "CINTAASIH",
+            "name_role" => "Bidgar Wakaf"
+        ]
+    ];
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Data user berhasil diambil.',
+        'data' => $users
+    ]);
+}
 }
