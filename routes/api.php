@@ -50,6 +50,7 @@ Route::get('fasilitas/jenis/{jenisFasilitas}/public', [PemetaanFasilitasControll
 Route::get('fasilitas/detail/public', [FasilitasController::class, 'publicIndex']);
 Route::get('fasilitas/detail/public/{id}', [FasilitasController::class, 'publicShow']);
 Route::get('inventaris/fasilitas/{id}/public', [InventarisController::class, 'publicShowByFasilitas']);
+Route::get('/datauser', [UserController::class, 'datauser']);
 
 // Protected routes
 Route::group(['middleware' => ['auth:sanctum']], function () {
