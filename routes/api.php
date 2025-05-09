@@ -47,10 +47,13 @@ Route::get('fasilitas/public/{id}', [PemetaanFasilitasController::class, 'public
 Route::get('pemetaan/{pemetaanTanahId}/fasilitas/public', [PemetaanFasilitasController::class, 'publicByPemetaanTanah']);
 Route::get('fasilitas/jenis/{jenisFasilitas}/public', [PemetaanFasilitasController::class, 'publicByJenis']);
 
+
 Route::get('fasilitas/detail/public', [FasilitasController::class, 'publicIndex']);
-Route::get('fasilitas/detail/public/{id}', [FasilitasController::class, 'publicShow']);
+Route::get('fasilitas/detail/publics/{id}', [FasilitasController::class, 'publicShow']);
+Route::get('fasilitas/detail/public/{id}', [FasilitasController::class, 'publicShowDetail']);
 Route::get('inventaris/fasilitas/{id}/public', [InventarisController::class, 'publicShowByFasilitas']);
 Route::get('/datauser', [UserController::class, 'datauser']);
+Route::get('inventaris/fasilitas/{id}/public/detail', [InventarisController::class, 'publicsShowByFasilitas']);
 
 // Protected routes
 Route::group(['middleware' => ['auth:sanctum']], function () {

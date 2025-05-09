@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\PemetaanFasilitas;
 use App\Models\Fasilitas;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -25,9 +26,9 @@ class FasilitasController extends Controller
         $validator = Validator::make($request->all(), [
             'id_pemetaan_fasilitas' => 'required|uuid|exists:pemetaan_fasilitas,id_pemetaan_fasilitas',
             'id_tanah' => 'required|uuid|exists:tanahs,id_tanah',
-            'file_360' => 'nullable|file|mimes:jpg,jpeg,png,mp4|max:5120',
-            'file_gambar' => 'nullable|file|mimes:jpg,jpeg,png|max:5120',
-            'file_pdf' => 'nullable|file|mimes:pdf|max:5120',
+            'file_360' => 'nullable|file|mimes:jpg,jpeg,png,mp4|max:15120',
+            'file_gambar' => 'nullable|file|mimes:jpg,jpeg,png|max:15120',
+            'file_pdf' => 'nullable|file|mimes:pdf|max:15120',
             'catatan' => 'nullable|string',
         ], [
             'id_pemetaan_fasilitas.required' => 'Pemetaan fasilitas wajib diisi',
@@ -35,9 +36,9 @@ class FasilitasController extends Controller
             'file_360.mimes' => 'File 360 derajat harus berupa JPG, JPEG, PNG, atau MP4',
             'file_gambar.mimes' => 'File gambar harus berupa JPG, JPEG, atau PNG',
             'file_pdf.mimes' => 'File PDF harus berupa PDF',
-            'file_360.max' => 'Ukuran file maksimal 5MB',
-            'file_gambar.max' => 'Ukuran gambar maksimal 5MB',
-            'file_pdf.max' => 'Ukuran PDF maksimal 5MB',
+            'file_360.max' => 'Ukuran file maksimal 15MB',
+            'file_gambar.max' => 'Ukuran gambar maksimal 15MB',
+            'file_pdf.max' => 'Ukuran PDF maksimal 15MB',
         ]);
 
         if ($validator->fails()) {
@@ -163,6 +164,52 @@ class FasilitasController extends Controller
             "status" => "success",
             "data" => $fasilitas
         ]);
+    }
+
+    public function publicShowDetail($id)
+    {
+        try {
+            // First find the pemetaan_fasilitas
+            $pemetaan = PemetaanFasilitas::with(['pemetaanTanah.tanah'])->findOrFail($id);
+            
+            // Then find the related fasilitas record
+            $fasilitas = Fasilitas::where('id_pemetaan_fasilitas', $id)
+                ->with(['inventaris'])
+                ->first();
+            
+            // Combine the data
+            $result = [
+                'id_pemetaan_fasilitas' => $pemetaan->id_pemetaan_fasilitas,
+                'nama_fasilitas' => $pemetaan->nama_fasilitas,
+                'jenis_fasilitas' => $pemetaan->jenis_fasilitas,
+                'kategori_fasilitas' => $pemetaan->kategori_fasilitas,
+                'pemetaanTanah' => $pemetaan->pemetaanTanah,
+                'created_at' => $pemetaan->created_at,
+            ];
+            
+            // Add fasilitas details if exists
+            if ($fasilitas) {
+                $result = array_merge($result, [
+                    'file_360' => $fasilitas->file_360,
+                    'file_gambar' => $fasilitas->file_gambar,
+                    'file_pdf' => $fasilitas->file_pdf,
+                    'catatan' => $fasilitas->catatan,
+                    'inventaris' => $fasilitas->inventaris
+                ]);
+            }
+            
+            return response()->json([
+                "status" => "success",
+                "data" => $result
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                "status" => "error",
+                "message" => "Fasilitas tidak ditemukan",
+                "error" => $e->getMessage()
+            ], 404);
+        }
     }
 
 
