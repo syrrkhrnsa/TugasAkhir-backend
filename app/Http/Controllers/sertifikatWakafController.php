@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Sertifikat;
+use App\Models\DokumenLegalitas;
 use App\Models\Approval;
 use App\Notifications\ApprovalNotification;
 use App\Models\User;
@@ -16,34 +17,30 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
-
 class SertifikatWakafController extends Controller
 {
     // Menampilkan data sertifikat untuk publik (hanya yang statusnya "disetujui")
     public function publicIndex()
     {
+        $sertifikats = Sertifikat::where('status', 'disetujui')->get();
 
-            $sertifikats = Sertifikat::where('status', 'disetujui')->get();
-
-            return response()->json([
-                "status" => "success",
-                "message" => "Data sertifikat berhasil diambil",
-                "data" => $sertifikats
-            ], Response::HTTP_OK);
+        return response()->json([
+            "status" => "success",
+            "message" => "Data sertifikat berhasil diambil",
+            "data" => $sertifikats
+        ], Response::HTTP_OK);
     }
 
     public function getSertifikatByIdTanah($id_tanah)
     {
-
         try {
             if (app()->environment('testing') && request()->has('force_db_error')) {
                 throw new \Exception('Database error for testing');
             }
 
             // Cari sertifikat berdasarkan id_tanah
-            $sertifikat = Sertifikat::where('id_tanah', $id_tanah)->get(); // Ubah ke get()
+            $sertifikat = Sertifikat::where('id_tanah', $id_tanah)->get();
 
-            // Jika data tidak ditemukan
             if ($sertifikat->isEmpty()) {
                 return response()->json([
                     "status" => "error",
@@ -51,14 +48,12 @@ class SertifikatWakafController extends Controller
                 ], Response::HTTP_NOT_FOUND);
             }
 
-            // Jika data ditemukan, kembalikan respons JSON
             return response()->json([
                 "status" => "success",
                 "message" => "Data sertifikat berhasil diambil",
-                "data" => $sertifikat // Ini akan mengembalikan array
+                "data" => $sertifikat
             ], Response::HTTP_OK);
         } catch (\Exception $e) {
-            // Log error jika terjadi kesalahan
             Log::error('Terjadi kesalahan saat mengambil data sertifikat', [
                 'error' => $e->getMessage(),
                 'stack' => $e->getTraceAsString()
@@ -73,74 +68,66 @@ class SertifikatWakafController extends Controller
     }
 
     public function showLegalitas($id_tanah)
-{
-    try {
-        if (app()->environment('testing') && request()->has('force_db_error')) {
-            throw new \Exception('Database error for testing');
-        }
-
-        // Cari semua sertifikat berdasarkan id_tanah
-        $sertifikats = Sertifikat::where('id_tanah', $id_tanah)->get();
-
-        // Jika data tidak ditemukan
-        if ($sertifikats->isEmpty()) {
-            return response()->json([
-                "status" => "error",
-                "message" => "Data sertifikat untuk tanah ini tidak ditemukan"
-            ], Response::HTTP_NOT_FOUND);
-        }
-
-        // Format data untuk response
-        $legalitasData = $sertifikats->map(function ($sertifikat) {
-            return [
-                "id_sertifikat" => $sertifikat->id_sertifikat,
-                "jenis_sertifikat" => $sertifikat->jenis_sertifikat
-            ];
-        });
-
-        return response()->json([
-            "status" => "success",
-            "message" => "Data legalitas berhasil diambil",
-            "data" => [
-                "id_tanah" => $id_tanah,
-                "legalitas" => $legalitasData
-            ]
-        ], Response::HTTP_OK);
-    } catch (\Exception $e) {
-        return response()->json([
-            "status" => "error",
-            "message" => "Terjadi kesalahan saat mengambil data legalitas",
-            "error" => $e->getMessage()
-        ], Response::HTTP_INTERNAL_SERVER_ERROR);
-    }
-}
-
-    // Menampilkan data sertifikat berdasarkan role pengguna
-    public function index()
     {
-
         try {
             if (app()->environment('testing') && request()->has('force_db_error')) {
                 throw new \Exception('Database error for testing');
             }
-            $user = Auth::user();
 
+            $sertifikats = Sertifikat::where('id_tanah', $id_tanah)->get();
+
+            if ($sertifikats->isEmpty()) {
+                return response()->json([
+                    "status" => "error",
+                    "message" => "Data sertifikat untuk tanah ini tidak ditemukan"
+                ], Response::HTTP_NOT_FOUND);
+            }
+
+            $legalitasData = $sertifikats->map(function ($sertifikat) {
+                return [
+                    "id_sertifikat" => $sertifikat->id_sertifikat,
+                    "jenis_sertifikat" => $sertifikat->jenis_sertifikat
+                ];
+            });
+
+            return response()->json([
+                "status" => "success",
+                "message" => "Data legalitas berhasil diambil",
+                "data" => [
+                    "id_tanah" => $id_tanah,
+                    "legalitas" => $legalitasData
+                ]
+            ], Response::HTTP_OK);
+        } catch (\Exception $e) {
+            return response()->json([
+                "status" => "error",
+                "message" => "Terjadi kesalahan saat mengambil data legalitas",
+                "error" => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // Menampilkan data sertifikat berdasarkan role pengguna
+    public function index()
+    {
+        try {
+            if (app()->environment('testing') && request()->has('force_db_error')) {
+                throw new \Exception('Database error for testing');
+            }
+            
+            $user = Auth::user();
             if (!$user) {
                 Log::error('User tidak terautentikasi');
                 return response()->json(["status" => "error", "message" => "User tidak terautentikasi"], Response::HTTP_UNAUTHORIZED);
             }
 
-            // ID role yang digunakan untuk filtering
             $rolePimpinanJamaah = '326f0dde-2851-4e47-ac5a-de6923447317';
             $rolePimpinanCabang = '3594bece-a684-4287-b0a2-7429199772a3';
             $roleBidgarWakaf = '26b2b64e-9ae3-4e2e-9063-590b1bb00480';
 
-            // Query data berdasarkan role pengguna
             if ($user->role_id === $rolePimpinanJamaah) {
-                // Pimpinan Jamaah: hanya melihat data berdasarkan user_id
                 $sertifikats = Sertifikat::where('user_id', $user->id)->get();
             } elseif ($user->role_id === $rolePimpinanCabang || $user->role_id === $roleBidgarWakaf) {
-                // Pimpinan Cabang dan Bidgar Wakaf: hanya melihat data dengan status "disetujui"
                 $sertifikats = Sertifikat::where('status', 'disetujui')->get();
             } else {
                 Log::error('Akses ditolak untuk user', ['user_id' => $user->id, 'role_id' => $user->role_id]);
@@ -167,111 +154,51 @@ class SertifikatWakafController extends Controller
 
     public function show($id)
     {
-        // Ambil data sertifikat berdasarkan ID
-        $sertifikat = Sertifikat::find($id);
+        $sertifikat = Sertifikat::with('dokumenLegalitas')->find($id);
 
         if (!$sertifikat) {
             return response()->json(['message' => 'Sertifikat tidak ditemukan'], 404);
         }
 
-        // Kembalikan data sertifikat sebagai response JSON
         return response()->json($sertifikat);
     }
 
-    public function store(Request $request)
+   public function store(Request $request)
 {
+
+     \Log::debug('Received data:', [
+        'jenis_sertifikat' => $request->jenis_sertifikat,
+        'status_pengajuan' => $request->status_pengajuan,
+        'files_count' => $request->hasFile('dokumen') ? count($request->file('dokumen')) : 0
+    ]);
+    
+    // First validate the non-file fields
     $validator = Validator::make($request->all(), [
-        'dokumen' => 'nullable|file|mimes:pdf|max:5120',
         'jenis_sertifikat' => 'required|string|in:BASTW,AIW,SW',
         'status_pengajuan' => 'required|string|in:Diproses,Terbit,Ditolak',
-        'id_tanah' => 'required|uuid|exists:tanahs,id_tanah',
         'tanggal_pengajuan' => 'required|date|before_or_equal:today',
+        'id_tanah' => 'required|uuid|exists:tanahs,id_tanah',
+        'dokumen' => 'sometimes|array', // Changed from required to sometimes
+        'dokumen.*' => 'sometimes|file|mimes:pdf|max:5120',
     ], [
         'jenis_sertifikat.required' => 'Jenis sertifikat wajib diisi',
+        'jenis_sertifikat.in' => 'Jenis sertifikat harus salah satu dari: BASTW, AIW, SW',
         'status_pengajuan.required' => 'Status pengajuan wajib diisi',
         'tanggal_pengajuan.required' => 'Tanggal pengajuan wajib diisi',
         'tanggal_pengajuan.before_or_equal' => 'Tanggal tidak boleh melebihi hari ini',
-        'dokumen.mimes' => 'Dokumen harus berupa PDF',
-        'dokumen.max' => 'Ukuran dokumen maksimal 5MB',
         'id_tanah.exists' => 'Tanah tidak ditemukan',
+        'dokumen.*.mimes' => 'Dokumen harus berupa PDF',
+        'dokumen.*.max' => 'Ukuran dokumen maksimal 5MB',
     ]);
 
     if ($validator->fails()) {
         return response()->json([
             "status" => "error",
-            "message" => "Validasi gagal",
+            "message" => "Validasi data gagal",
             "errors" => $validator->errors()
-        ], 422);
+        ], Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 
-    try {
-        $user = Auth::user();
-        if (!$user) {
-            return response()->json(["status" => "error", "message" => "User tidak terautentikasi"], 401);
-        }
-
-        $data = [
-            'id_sertifikat' => Str::uuid(),
-            'id_tanah' => $request->id_tanah,
-            'jenis_sertifikat' => $request->jenis_sertifikat,
-            'status_pengajuan' => $request->status_pengajuan,
-            'tanggal_pengajuan' => $request->tanggal_pengajuan,
-            'user_id' => $user->id,
-        ];
-
-        // Set status based on user role
-        $rolePimpinanJamaah = '326f0dde-2851-4e47-ac5a-de6923447317';
-        $data['status'] = ($user->role_id === $rolePimpinanJamaah) ? 'ditinjau' : 'disetujui';
-
-        // Handle file upload
-        if ($request->hasFile('dokumen')) {
-            $path = $request->file('dokumen')->store('dokumen', 'public');
-            $data['dokumen'] = $path;
-        }
-
-        // Create sertifikat
-        $sertifikat = Sertifikat::create($data);
-
-        // If Pimpinan Jamaah, create approval
-        if ($user->role_id === $rolePimpinanJamaah) {
-            $approval = Approval::create([
-                'user_id' => $user->id,
-                'type' => 'sertifikat',
-                'data_id' => $data['id_sertifikat'],
-                'data' => json_encode($data),
-                'status' => 'ditinjau',
-            ]);
-
-            // Notify Bidgar Wakaf
-            $bidgarWakaf = User::where('role_id', '26b2b64e-9ae3-4e2e-9063-590b1bb00480')->get();
-            foreach ($bidgarWakaf as $bidgar) {
-                $bidgar->notify(new ApprovalNotification($approval, 'create', 'bidgar'));
-            }
-
-            return response()->json([
-                "status" => "success",
-                "message" => "Permintaan telah dikirim ke Bidgar Wakaf untuk ditinjau.",
-            ], 201);
-        }
-
-        return response()->json([
-            "status" => "success",
-            "message" => "Sertifikat berhasil dibuat",
-            "data" => $sertifikat
-        ], 201);
-
-    } catch (\Exception $e) {
-        Log::error('Error creating sertifikat: ' . $e->getMessage());
-        return response()->json([
-            "status" => "error",
-            "message" => "Terjadi kesalahan saat menyimpan data",
-            "error" => $e->getMessage()
-        ], 500);
-    }
-}
-
-public function update(Request $request, $id)
-{
     DB::beginTransaction();
     try {
         $user = Auth::user();
@@ -279,112 +206,189 @@ public function update(Request $request, $id)
             return response()->json([
                 "status" => "error",
                 "message" => "User tidak terautentikasi"
-            ], 401);
+            ], Response::HTTP_UNAUTHORIZED);
         }
 
-        // Validate request data
-        $validator = Validator::make($request->all(), [
-            'tanggal_pengajuan' => 'required|date_format:Y-m-d',
-            'no_dokumen' => 'sometimes|string|max:100',
-            'dokumen' => 'sometimes|file|mimes:pdf|max:5120',
-        ], [
-            'tanggal_pengajuan.required' => 'Tanggal pengajuan wajib diisi',
-            'tanggal_pengajuan.date_format' => 'Format tanggal harus YYYY-MM-DD',
-            'dokumen.mimes' => 'Dokumen harus berupa file PDF',
-            'dokumen.max' => 'Ukuran dokumen maksimal 5MB',
+        // Buat sertifikat
+        $sertifikat = Sertifikat::create([
+            'id_sertifikat' => Str::uuid(),
+            'id_tanah' => $request->id_tanah,
+            'jenis_sertifikat' => $request->jenis_sertifikat,
+            'status_pengajuan' => $request->status_pengajuan,
+            'tanggal_pengajuan' => $request->tanggal_pengajuan,
+            'user_id' => $user->id,
+            'status' => ($user->role_id === '326f0dde-2851-4e47-ac5a-de6923447317') ? 'ditinjau' : 'disetujui'
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                "status" => "error",
-                "message" => "Validasi gagal",
-                "errors" => $validator->errors()
-            ], 422);
-        }
-
-        // Role IDs
-        $rolePimpinanJamaah = '326f0dde-2851-4e47-ac5a-de6923447317';
-        $roleBidgarWakaf = '26b2b64e-9ae3-4e2e-9063-590b1bb00480';
-
-        // Find the specific sertifikat
-        $sertifikat = Sertifikat::where('id_sertifikat', $id)->firstOrFail();
-
-        // Prepare update data
-        $updateData = [
-            'no_dokumen' => $request->no_dokumen ?? $sertifikat->no_dokumen,
-            'tanggal_pengajuan' => $request->tanggal_pengajuan,
-        ];
-
-        // Handle file upload
+        // Upload dan simpan dokumen-dokumen jika ada
         if ($request->hasFile('dokumen')) {
-            // Delete old file if exists
-            if ($sertifikat->dokumen) {
-                Storage::delete($sertifikat->dokumen);
+            foreach ($request->file('dokumen') as $file) {
+                $filename = 'sertifikat/dokumen/' . Str::uuid() . '.' . $file->getClientOriginalExtension();
+                
+                Storage::disk('minio')->put($filename, fopen($file->path(), 'r'), [
+                    'ContentType' => $file->getMimeType()
+                ]);
+
+                DokumenLegalitas::create([
+                    'id_dokumen_legalitas' => Str::uuid(),
+                    'id_sertifikat' => $sertifikat->id_sertifikat,
+                    'dokumen_legalitas' => $filename
+                ]);
             }
-            $path = $request->file('dokumen')->store('dokumen', 'public');
-            $updateData['dokumen'] = $path;
         }
 
-        // Pimpinan Jamaah workflow
-        if ($user->role_id === $rolePimpinanJamaah) {
-            // Save original data before update
-            $originalData = $sertifikat->getOriginal();
-            
-            // Create approval
+        // Jika role Pimpinan Jamaah, buat approval
+        if ($user->role_id === '326f0dde-2851-4e47-ac5a-de6923447317') {
             $approval = Approval::create([
                 'user_id' => $user->id,
-                'type' => 'sertifikat_update',
-                'data_id' => $id,
+                'type' => 'sertifikat',
+                'data_id' => $sertifikat->id_sertifikat,
+                'data' => json_encode($sertifikat->toArray()),
                 'status' => 'ditinjau',
-                'data' => json_encode([
-                    'previous_data' => $originalData,
-                    'updated_data' => $updateData
-                ]),
             ]);
 
-            // Update with pending status
-            $sertifikat->update(array_merge($updateData, [
-                'status' => 'ditinjau'
-            ]));
-
-            // Notify Bidgar Wakaf
-            User::where('role_id', $roleBidgarWakaf)
-                ->each(function($user) use ($approval) {
-                    $user->notify(new ApprovalNotification(
-                        $approval,
-                        'update',
-                        'bidgar'
-                    ));
-                });
+            User::where('role_id', '26b2b64e-9ae3-4e2e-9063-590b1bb00480')
+                ->each(fn($user) => $user->notify(
+                    new ApprovalNotification($approval, 'create', 'bidgar')
+                ));
 
             DB::commit();
+            
             return response()->json([
                 "status" => "success",
-                "message" => "Perubahan menunggu persetujuan Bidgar Wakaf",
-                "approval_id" => $approval->id
-            ], 202);
+                "message" => "Permintaan telah dikirim ke Bidgar Wakaf untuk ditinjau.",
+                "data" => [
+                    "sertifikat" => $sertifikat,
+                    "approval_id" => $approval->id
+                ]
+            ], Response::HTTP_CREATED);
         }
 
-        // Bidgar Wakaf direct update
-        $sertifikat->update($updateData);
         DB::commit();
-
+        
         return response()->json([
             "status" => "success",
-            "message" => "Data sertifikat berhasil diperbarui",
+            "message" => "Sertifikat berhasil dibuat",
             "data" => $sertifikat
-        ], 200);
+        ], Response::HTTP_CREATED);
 
     } catch (\Exception $e) {
         DB::rollBack();
-        Log::error('Sertifikat update error: '.$e->getMessage());
+        
+        Log::error('Error creating sertifikat', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
+            'request_data' => $request->all()
+        ]);
+        
         return response()->json([
             "status" => "error",
-            "message" => "Gagal memperbarui data",
+            "message" => "Gagal menyimpan data sertifikat",
             "error" => $e->getMessage()
-        ], 500);
+        ], Response::HTTP_INTERNAL_SERVER_ERROR);
     }
 }
+
+    public function update(Request $request, $id)
+    {
+        DB::beginTransaction();
+        try {
+            $user = Auth::user();
+            if (!$user) {
+                return response()->json([
+                    "status" => "error",
+                    "message" => "User tidak terautentikasi"
+                ], Response::HTTP_UNAUTHORIZED);
+            }
+
+            $validator = Validator::make($request->all(), [
+                'tanggal_pengajuan' => 'required|date_format:Y-m-d',
+                'no_dokumen' => 'nullable|string|max:100',
+            ], [
+                'tanggal_pengajuan.required' => 'Tanggal pengajuan wajib diisi',
+                'tanggal_pengajuan.date_format' => 'Format tanggal harus YYYY-MM-DD',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    "status" => "error",
+                    "message" => "Validasi gagal",
+                    "errors" => $validator->errors()
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+
+            $rolePimpinanJamaah = '326f0dde-2851-4e47-ac5a-de6923447317';
+            $roleBidgarWakaf = '26b2b64e-9ae3-4e2e-9063-590b1bb00480';
+
+            $sertifikat = Sertifikat::where('id_sertifikat', $id)->firstOrFail();
+
+            $updateData = [
+                'no_dokumen' => $request->no_dokumen ?? $sertifikat->no_dokumen,
+                'tanggal_pengajuan' => $request->tanggal_pengajuan,
+            ];
+
+            // Pimpinan Jamaah workflow
+            if ($user->role_id === $rolePimpinanJamaah) {
+                $originalData = $sertifikat->getOriginal();
+                
+                $approval = Approval::create([
+                    'user_id' => $user->id,
+                    'type' => 'sertifikat_update',
+                    'data_id' => $id,
+                    'status' => 'ditinjau',
+                    'data' => json_encode([
+                        'previous_data' => $originalData,
+                        'updated_data' => $updateData
+                    ]),
+                ]);
+
+                $sertifikat->update(array_merge($updateData, [
+                    'status' => 'ditinjau'
+                ]));
+
+                User::where('role_id', $roleBidgarWakaf)
+                    ->each(function($user) use ($approval) {
+                        $user->notify(new ApprovalNotification(
+                            $approval,
+                            'update',
+                            'bidgar'
+                        ));
+                    });
+
+                DB::commit();
+                return response()->json([
+                    "status" => "success",
+                    "message" => "Perubahan menunggu persetujuan Bidgar Wakaf",
+                    "approval_id" => $approval->id
+                ], Response::HTTP_ACCEPTED);
+            }
+
+            // Bidgar Wakaf direct update
+            $sertifikat->update($updateData);
+            DB::commit();
+
+            return response()->json([
+                "status" => "success",
+                "message" => "Data sertifikat berhasil diperbarui",
+                "data" => $sertifikat
+            ], Response::HTTP_OK);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Sertifikat update error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'sertifikat_id' => $id,
+                'request_data' => $request->all()
+            ]);
+            
+            return response()->json([
+                "status" => "error",
+                "message" => "Gagal memperbarui data",
+                "error" => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
 
     public function updateJenisSertifikat(Request $request, $id)
     {
@@ -411,7 +415,6 @@ public function update(Request $request, $id)
                 return response()->json(["status" => "error", "message" => "Data tidak ditemukan"], Response::HTTP_NOT_FOUND);
             }
 
-            // Update hanya field jenis_sertifikat
             $sertifikat->jenis_sertifikat = $request->jenis_sertifikat;
             $sertifikat->save();
 
@@ -450,15 +453,12 @@ public function update(Request $request, $id)
                 ], Response::HTTP_BAD_REQUEST);
             }
 
-
             $sertifikat = Sertifikat::find($id);
             if (!$sertifikat) {
                 return response()->json(["status" => "error", "message" => "Data tidak ditemukan"], Response::HTTP_NOT_FOUND);
             }
 
-            // Update hanya field status_pengajuan
             $sertifikat->status_pengajuan = $request->status_pengajuan;
-            
             $sertifikat->save();
 
             return response()->json([
@@ -476,11 +476,9 @@ public function update(Request $request, $id)
         }
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy($id)
     {
+        DB::beginTransaction();
         try {
             $sertifikat = Sertifikat::find($id);
             
@@ -491,23 +489,234 @@ public function update(Request $request, $id)
                 ], Response::HTTP_NOT_FOUND);
             }
 
-            // Delete associated file if exists
-            if ($sertifikat->dokumen) {
-                Storage::disk('public')->delete($sertifikat->dokumen);
+            // Hapus semua dokumen terkait
+            $dokumenList = DokumenLegalitas::where('id_sertifikat', $id)->get();
+            foreach ($dokumenList as $dokumen) {
+                if (Storage::disk('minio')->exists($dokumen->dokumen_legalitas)) {
+                    Storage::disk('minio')->delete($dokumen->dokumen_legalitas);
+                }
+                $dokumen->delete();
             }
 
             $sertifikat->delete();
 
+            DB::commit();
             return response()->json([
                 "status" => "success",
                 "message" => "Data berhasil dihapus"
             ], Response::HTTP_OK);
 
         } catch (\Exception $e) {
+            DB::rollBack();
             Log::error('Error deleting sertifikat: ' . $e->getMessage());
             return response()->json([
                 "status" => "error",
                 "message" => "Terjadi kesalahan saat menghapus data"
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function downloadDokumen($id_dokumen_legalitas)
+    {
+        $dokumen = DokumenLegalitas::findOrFail($id_dokumen_legalitas);
+        
+        if (!Storage::disk('minio')->exists($dokumen->dokumen_legalitas)) {
+            abort(404, 'File tidak ditemukan');
+        }
+
+        return Storage::disk('minio')->download(
+            $dokumen->dokumen_legalitas,
+            "dokumen_legalitas_{$dokumen->id_dokumen_legalitas}.pdf"
+        );
+    }
+
+    public function viewDokumen($id_dokumen_legalitas)
+    {
+        $dokumen = DokumenLegalitas::findOrFail($id_dokumen_legalitas);
+        
+        if (!Storage::disk('minio')->exists($dokumen->dokumen_legalitas)) {
+            abort(404, 'File tidak ditemukan');
+        }
+
+        // Tambahkan header CORS dan pastikan token valid
+        return response()->make(
+            Storage::disk('minio')->get($dokumen->dokumen_legalitas),
+            200,
+            [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="'.$dokumen->dokumen_legalitas.'"',
+                'Access-Control-Allow-Origin' => '*',
+                'Access-Control-Allow-Methods' => 'GET',
+                'Access-Control-Allow-Headers' => 'Content-Type, Authorization'
+            ]
+        );
+    }
+
+    public function uploadDokumen(Request $request, $id_sertifikat)
+    {
+        $validator = Validator::make($request->all(), [
+            'dokumen.*' => 'required|file|mimes:pdf|max:5120',
+        ], [
+            'dokumen.*.required' => 'Dokumen wajib diupload',
+            'dokumen.*.mimes' => 'Dokumen harus berupa PDF',
+            'dokumen.*.max' => 'Ukuran dokumen maksimal 5MB',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                "status" => "error",
+                "message" => "Validasi file gagal",
+                "errors" => $validator->errors()
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        DB::beginTransaction();
+        try {
+            $sertifikat = Sertifikat::findOrFail($id_sertifikat);
+            $uploadedFiles = [];
+
+            foreach ($request->file('dokumen') as $file) {
+                $filename = 'sertifikat/dokumen/' . Str::uuid() . '.' . $file->getClientOriginalExtension();
+                
+                Storage::disk('minio')->put($filename, fopen($file->path(), 'r'), [
+                    'ContentType' => $file->getMimeType()
+                ]);
+
+                $dokumenLegalitas = DokumenLegalitas::create([
+                    'id_dokumen_legalitas' => Str::uuid(),
+                    'id_sertifikat' => $id_sertifikat,
+                    'dokumen_legalitas' => $filename
+                ]);
+
+                $uploadedFiles[] = [
+                    "id_dokumen_legalitas" => $dokumenLegalitas->id_dokumen_legalitas,
+                    "filename" => $filename,
+                    "url" => Storage::disk('minio')->url($filename)
+                ];
+            }
+
+            DB::commit();
+
+            return response()->json([
+                "status" => "success",
+                "message" => "Dokumen berhasil diupload",
+                "data" => $uploadedFiles
+            ], Response::HTTP_CREATED);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error uploading document', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                "status" => "error",
+                "message" => "Gagal mengupload dokumen",
+                "error" => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function deleteDokumen($id_dokumen_legalitas)
+    {
+        DB::beginTransaction();
+        try {
+            $dokumen = DokumenLegalitas::find($id_dokumen_legalitas);
+            
+            if (!$dokumen) {
+                // Jika dokumen sudah tidak ada, anggap sebagai sukses
+                return response()->json([
+                    "status" => "success",
+                    "message" => "Dokumen sudah tidak ada"
+                ], Response::HTTP_OK);
+            }
+
+            if (Storage::disk('minio')->exists($dokumen->dokumen_legalitas)) {
+                Storage::disk('minio')->delete($dokumen->dokumen_legalitas);
+            }
+
+            $dokumen->delete();
+
+            DB::commit();
+
+            return response()->json([
+                "status" => "success",
+                "message" => "Dokumen berhasil dihapus"
+            ], Response::HTTP_OK);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error deleting document', [
+                'error' => $e->getMessage(),
+                'id_dokumen_legalitas' => $id_dokumen_legalitas
+            ]);
+            
+            return response()->json([
+                "status" => "error",
+                "message" => "Gagal menghapus dokumen",
+                "error" => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function getDokumenLegalitas($id_sertifikat)
+    {
+        try {
+            $sertifikat = Sertifikat::with('dokumenLegalitas')->findOrFail($id_sertifikat);
+
+            return response()->json([
+                "status" => "success",
+                "message" => "Dokumen legalitas berhasil diambil",
+                "data" => $sertifikat->dokumenLegalitas->map(function($dokumen) {
+                    return [
+                        'id_dokumen_legalitas' => $dokumen->id_dokumen_legalitas,
+                        'filename' => $dokumen->dokumen_legalitas,
+                        'url' => Storage::disk('minio')->url($dokumen->dokumen_legalitas),
+                        'created_at' => $dokumen->created_at
+                    ];
+                })
+            ], Response::HTTP_OK);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                "status" => "error",
+                "message" => "Gagal mengambil dokumen legalitas",
+                "error" => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function getDokumenList($id_sertifikat)
+    {
+        try {
+            $dokumenList = DokumenLegalitas::where('id_sertifikat', $id_sertifikat)
+                ->get()
+                ->map(function($dokumen) {
+                    return [
+                        'id' => $dokumen->id_dokumen_legalitas,
+                        'name' => basename($dokumen->dokumen_legalitas),
+                        'url' => Storage::disk('minio')->url($dokumen->dokumen_legalitas),
+                        'created_at' => $dokumen->created_at->format('Y-m-d H:i:s')
+                    ];
+                });
+
+            return response()->json([
+                "status" => "success",
+                "message" => "Daftar dokumen berhasil diambil",
+                "data" => $dokumenList
+            ], Response::HTTP_OK);
+
+        } catch (\Exception $e) {
+            Log::error('Error fetching document list', [
+                'error' => $e->getMessage(),
+                'stack' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                "status" => "error",
+                "message" => "Gagal mengambil daftar dokumen",
+                "error" => $e->getMessage()
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
