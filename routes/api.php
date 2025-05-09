@@ -57,10 +57,10 @@ Route::get('/certificate/{filename}', [MinioUploadController::class, 'getCertifi
 Route::get('/certificate/view/{filename}', [MinioUploadController::class, 'viewCertificate']); // Untuk lihat URL
 Route::delete('/certificate/delete/{filename}', [MinioUploadController::class, 'deleteCertificate']); // Untuk delete
 
-Route::get('/sertifikat/{id}/download', [sertifikatWakafController::class, 'downloadDokumen']);
-    Route::get('/sertifikat/{id}/view', [sertifikatWakafController::class, 'viewDokumen']);
+Route::get('/dokumen-legalitas/{id_dokumen_legalitas}/view', [sertifikatWakafController::class, 'viewDokumen']);
+Route::get('/dokumen-legalitas/{id_dokumen_legalitas}/download', [sertifikatWakafController::class, 'downloadDokumen']);
 
-    // Public route untuk akses GeoTIFF
+// Public route untuk akses GeoTIFF
 Route::get('/geotiff/{filename}', function ($filename) {
     $path = storage_path('app/geotiffs/'.urldecode($filename));
     
@@ -115,11 +115,12 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::get('/sertifikat/legalitas/{id}', [sertifikatWakafController::class, 'showLegalitas']);
     Route::get('/sertifikat/tanah/{id_tanah}', [sertifikatWakafController::class, 'getSertifikatByIdTanah']);
 
-    
-    Route::post('/upload-dokumen', [sertifikatWakafController::class, 'uploadDokumen']);
-    Route::delete('/delete-dokumen', [sertifikatWakafController::class, 'deleteDokumen']);
+    Route::get('/sertifikat/{id_sertifikat}/dokumen-list', [sertifikatWakafController::class, 'getDokumenList']);
 
-    
+    Route::post('/sertifikat/{id_sertifikat}/upload-dokumen', [sertifikatWakafController::class, 'uploadDokumen']);
+    Route::delete('/dokumen-legalitas/{id_dokumen_legalitas}', [sertifikatWakafController::class, 'deleteDokumen']);
+    Route::get('/sertifikat/{id_sertifikat}/dokumen', [sertifikatWakafController::class, 'getDokumenLegalitas']);
+
     Route::get('/approvals', [ApprovalController::class, 'index']);
     Route::get('/approvals/{id}', [ApprovalController::class, 'show']);
     Route::post('/approvals/{id}/approve', [ApprovalController::class, 'approve']);
@@ -140,6 +141,15 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::get('/log-tanah/{tanahId}', [ActivityLogController::class, 'logByTanahId']);
     Route::get('/log-sertifikat/{sertifikatId}', [ActivityLogController::class, 'logBySertifikatId']);
     Route::get('/log-sertifikat-by-tanah/{tanahId}', [ActivityLogController::class, 'logSertifikatByTanahId']);
+    Route::get('/logs/fasilitas', [ActivityLogController::class, 'logFasilitas']);
+    Route::get('/logs/inventaris', [ActivityLogController::class, 'logInventaris']);
+    Route::get('/logs/fasilitas/{fasilitasId}', [ActivityLogController::class, 'logByFasilitasId']);
+    Route::get('/logs/inventaris/{inventarisId}', [ActivityLogController::class, 'logByInventarisId']);
+    Route::get('/logs/pemetaan-fasilitas', [ActivityLogController::class, 'logPemetaanFasilitas']);
+    Route::get('/logs/pemetaan-tanah', [ActivityLogController::class, 'logPemetaanTanah']);
+    Route::get('/logs/pemetaan-fasilitas/{pemetaanFasilitasId}', [ActivityLogController::class, 'logByPemetaanFasilitasId']);
+    Route::get('/logs/pemetaan-tanah/{pemetaanTanahId}', [ActivityLogController::class, 'logByPemetaanTanahId']);
+    Route::get('/logs/pemetaan-fasilitas-by-tanah/{pemetaanTanahId}', [ActivityLogController::class, 'logPemetaanFasilitasByTanahId']);
     
     Route::get('/dashboard/stats', [DashboardController::class, 'getDashboardStats']);
 
@@ -173,9 +183,9 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
         Route::put('/tanah/{id}', [PemetaanTanahController::class, 'update']);
         Route::delete('/tanah/{id}', [PemetaanTanahController::class, 'destroy']);
         Route::get('/user/pemetaan-tanah/{userId}', [PemetaanTanahController::class, 'getUserPemetaanTanah']);
-    Route::get('/user/pemetaan-tanah/{userId}/{idPemetaanTanah}', [PemetaanTanahController::class, 'getUserPemetaanTanahDetail']);
-    
-        // Pemetaan Fasilitas
+        Route::get('/user/pemetaan-tanah/{userId}/{idPemetaanTanah}', [PemetaanTanahController::class, 'getUserPemetaanTanahDetail']);
+        
+            // Pemetaan Fasilitas
         Route::get('/fasilitas', [PemetaanFasilitasController::class, 'indexAll']);
         Route::get('/fasilitas/{pemetaanTanahId}', [PemetaanFasilitasController::class, 'index']);
         Route::post('/fasilitas/{pemetaanTanahId}', [PemetaanFasilitasController::class, 'store']);

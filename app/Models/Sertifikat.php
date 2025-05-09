@@ -18,7 +18,6 @@ class Sertifikat extends Model
     protected $fillable = [
         'id_sertifikat',
         'no_dokumen',
-        'dokumen',
         'jenis_sertifikat',
         'status_pengajuan',
         'tanggal_pengajuan',
@@ -42,5 +41,10 @@ class Sertifikat extends Model
     public function approvals()
     {
         return $this->hasMany(Approval::class, 'data_id', 'id_sertifikat');
+    }
+
+    public function dokumenLegalitas()
+    {
+        return $this->hasMany(DokumenLegalitas::class, 'id_sertifikat', 'id_sertifikat');
     }
 }
