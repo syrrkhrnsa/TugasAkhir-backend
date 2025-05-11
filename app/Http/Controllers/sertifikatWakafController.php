@@ -114,7 +114,7 @@ class SertifikatWakafController extends Controller
             if (app()->environment('testing') && request()->has('force_db_error')) {
                 throw new \Exception('Database error for testing');
             }
-            
+
             $user = Auth::user();
             if (!$user) {
                 Log::error('User tidak terautentikasi');
@@ -171,7 +171,7 @@ class SertifikatWakafController extends Controller
         'status_pengajuan' => $request->status_pengajuan,
         'files_count' => $request->hasFile('dokumen') ? count($request->file('dokumen')) : 0
     ]);
-    
+
     // First validate the non-file fields
     $validator = Validator::make($request->all(), [
         'jenis_sertifikat' => 'required|string|in:BASTW,AIW,SW',
@@ -224,7 +224,7 @@ class SertifikatWakafController extends Controller
         if ($request->hasFile('dokumen')) {
             foreach ($request->file('dokumen') as $file) {
                 $filename = 'sertifikat/dokumen/' . Str::uuid() . '.' . $file->getClientOriginalExtension();
-                
+
                 Storage::disk('minio')->put($filename, fopen($file->path(), 'r'), [
                     'ContentType' => $file->getMimeType()
                 ]);
@@ -253,7 +253,7 @@ class SertifikatWakafController extends Controller
                 ));
 
             DB::commit();
-            
+
             return response()->json([
                 "status" => "success",
                 "message" => "Permintaan telah dikirim ke Bidgar Wakaf untuk ditinjau.",
@@ -265,7 +265,7 @@ class SertifikatWakafController extends Controller
         }
 
         DB::commit();
-        
+
         return response()->json([
             "status" => "success",
             "message" => "Sertifikat berhasil dibuat",
@@ -274,13 +274,13 @@ class SertifikatWakafController extends Controller
 
     } catch (\Exception $e) {
         DB::rollBack();
-        
+
         Log::error('Error creating sertifikat', [
             'error' => $e->getMessage(),
             'trace' => $e->getTraceAsString(),
             'request_data' => $request->all()
         ]);
-        
+
         return response()->json([
             "status" => "error",
             "message" => "Gagal menyimpan data sertifikat",
@@ -293,6 +293,9 @@ class SertifikatWakafController extends Controller
     {
         DB::beginTransaction();
         try {
+            if (app()->environment('testing') && $request->has('force_db_error')) {
+                throw new \Exception('DB Simulated Error');
+            }
             $user = Auth::user();
             if (!$user) {
                 return response()->json([
@@ -330,7 +333,7 @@ class SertifikatWakafController extends Controller
             // Pimpinan Jamaah workflow
             if ($user->role_id === $rolePimpinanJamaah) {
                 $originalData = $sertifikat->getOriginal();
-                
+
                 $approval = Approval::create([
                     'user_id' => $user->id,
                     'type' => 'sertifikat_update',
@@ -381,7 +384,7 @@ class SertifikatWakafController extends Controller
                 'sertifikat_id' => $id,
                 'request_data' => $request->all()
             ]);
-            
+
             return response()->json([
                 "status" => "error",
                 "message" => "Gagal memperbarui data",
@@ -481,7 +484,7 @@ class SertifikatWakafController extends Controller
         DB::beginTransaction();
         try {
             $sertifikat = Sertifikat::find($id);
-            
+
             if (!$sertifikat) {
                 return response()->json([
                     "status" => "error",
@@ -519,7 +522,7 @@ class SertifikatWakafController extends Controller
     public function downloadDokumen($id_dokumen_legalitas)
     {
         $dokumen = DokumenLegalitas::findOrFail($id_dokumen_legalitas);
-        
+
         if (!Storage::disk('minio')->exists($dokumen->dokumen_legalitas)) {
             abort(404, 'File tidak ditemukan');
         }
@@ -533,7 +536,7 @@ class SertifikatWakafController extends Controller
     public function viewDokumen($id_dokumen_legalitas)
     {
         $dokumen = DokumenLegalitas::findOrFail($id_dokumen_legalitas);
-        
+
         if (!Storage::disk('minio')->exists($dokumen->dokumen_legalitas)) {
             abort(404, 'File tidak ditemukan');
         }
@@ -554,6 +557,8 @@ class SertifikatWakafController extends Controller
 
     public function uploadDokumen(Request $request, $id_sertifikat)
     {
+
+
         $validator = Validator::make($request->all(), [
             'dokumen.*' => 'required|file|mimes:pdf|max:5120',
         ], [
@@ -572,12 +577,16 @@ class SertifikatWakafController extends Controller
 
         DB::beginTransaction();
         try {
+            if (app()->environment('testing') && $request->has('force_db_error')) {
+                throw new \Exception('DB Simulated Error');
+            }
+
             $sertifikat = Sertifikat::findOrFail($id_sertifikat);
             $uploadedFiles = [];
 
             foreach ($request->file('dokumen') as $file) {
                 $filename = 'sertifikat/dokumen/' . Str::uuid() . '.' . $file->getClientOriginalExtension();
-                
+
                 Storage::disk('minio')->put($filename, fopen($file->path(), 'r'), [
                     'ContentType' => $file->getMimeType()
                 ]);
@@ -609,7 +618,7 @@ class SertifikatWakafController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             return response()->json([
                 "status" => "error",
                 "message" => "Gagal mengupload dokumen",
@@ -622,8 +631,11 @@ class SertifikatWakafController extends Controller
     {
         DB::beginTransaction();
         try {
+            if (app()->environment('testing') && request()->has('force_db_error')) {
+                throw new \Exception('DB error simulated');
+            }
             $dokumen = DokumenLegalitas::find($id_dokumen_legalitas);
-            
+
             if (!$dokumen) {
                 // Jika dokumen sudah tidak ada, anggap sebagai sukses
                 return response()->json([
@@ -651,7 +663,7 @@ class SertifikatWakafController extends Controller
                 'error' => $e->getMessage(),
                 'id_dokumen_legalitas' => $id_dokumen_legalitas
             ]);
-            
+
             return response()->json([
                 "status" => "error",
                 "message" => "Gagal menghapus dokumen",
@@ -663,6 +675,9 @@ class SertifikatWakafController extends Controller
     public function getDokumenLegalitas($id_sertifikat)
     {
         try {
+            if (app()->environment('testing') && request()->has('force_db_error')) {
+                throw new \Exception('DB Simulated Error');
+            }
             $sertifikat = Sertifikat::with('dokumenLegalitas')->findOrFail($id_sertifikat);
 
             return response()->json([
@@ -690,6 +705,9 @@ class SertifikatWakafController extends Controller
     public function getDokumenList($id_sertifikat)
     {
         try {
+            if (app()->environment('testing') && request()->has('force_db_error')) {
+                throw new \Exception('Database error for testing');
+            }
             $dokumenList = DokumenLegalitas::where('id_sertifikat', $id_sertifikat)
                 ->get()
                 ->map(function($dokumen) {
@@ -712,7 +730,7 @@ class SertifikatWakafController extends Controller
                 'error' => $e->getMessage(),
                 'stack' => $e->getTraceAsString()
             ]);
-            
+
             return response()->json([
                 "status" => "error",
                 "message" => "Gagal mengambil daftar dokumen",

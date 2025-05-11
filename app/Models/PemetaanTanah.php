@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -12,6 +14,9 @@ use Illuminate\Support\Facades\DB;
 
 class PemetaanTanah extends Model
 {
+    use HasFactory;
+
+
     protected $table = 'pemetaan_tanah';
     protected $primaryKey = 'id_pemetaan_tanah';
     protected $keyType = 'string';
@@ -32,7 +37,7 @@ class PemetaanTanah extends Model
         'geometri' => GeometryCast::class
     ];
 
-    
+
 
     public function tanah(): BelongsTo
     {
