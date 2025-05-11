@@ -5,6 +5,7 @@ namespace Database\Factories;
 use App\Models\ActivityLog;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
+use App\Models\User;
 
 class ActivityLogFactory extends Factory
 {
@@ -12,10 +13,12 @@ class ActivityLogFactory extends Factory
 
     public function definition()
     {
+        $user = User::factory()->create();
+
         return [
             'model_type' => 'App\Models\Tanah',
             'model_id' => Str::uuid(),
-            'user_id' => null, // akan diisi manual di test
+            'user_id' => $user->id,
             'action' => 'create',
             'changes' => json_encode(['nama' => 'Contoh']),
         ];
