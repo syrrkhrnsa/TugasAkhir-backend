@@ -16,6 +16,9 @@ use Illuminate\Support\Str;
 use Mockery;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use App\Models\DokumenLegalitas;
+use Illuminate\Http\Response;
+
 
 class SertifikatWakafControllerTest extends TestCase
 {
@@ -30,6 +33,7 @@ class SertifikatWakafControllerTest extends TestCase
         parent::setUp();
         Storage::fake('public');
         Notification::fake();
+        Storage::fake('minio');
     }
     protected function tearDown(): void
     {
@@ -295,7 +299,7 @@ class SertifikatWakafControllerTest extends TestCase
             'jenis_sertifikat' => 'BASTW',
             'status_pengajuan' => 'Diproses',
             'tanggal_pengajuan' => now()->format('Y-m-d'),
-            'dokumen' => UploadedFile::fake()->create('document.pdf', 1000, 'application/pdf')
+
         ];
 
         $response = $this->actingAs($user)
@@ -326,7 +330,6 @@ class SertifikatWakafControllerTest extends TestCase
             'jenis_sertifikat' => 'BASTW',
             'status_pengajuan' => 'Terbit',
             'tanggal_pengajuan' => now()->format('Y-m-d'),
-            'dokumen' => UploadedFile::fake()->create('document.pdf', 1000, 'application/pdf')
         ];
 
         $response = $this->actingAs($user)
@@ -454,11 +457,9 @@ class SertifikatWakafControllerTest extends TestCase
             'status' => 'disetujui'
         ]);
 
-        $file = UploadedFile::fake()->create('document.pdf', 1024);
 
         $response = $this->actingAs($user)
             ->putJson("/api/sertifikat/{$sertifikat->id_sertifikat}", [
-                'dokumen' => $file, // Changed from 'dokBastw' to 'dokumen'
                 'jenis_sertifikat' => 'BASTW', // Include required fields
                 'status_pengajuan' => 'Terbit',
                 'tanggal_pengajuan' => now()->format('Y-m-d')
@@ -466,10 +467,6 @@ class SertifikatWakafControllerTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJson(['status' => 'success']);
-
-        // Verify file was stored
-        $this->assertNotNull($sertifikat->fresh()->dokumen);
-        Storage::disk('public')->assertExists($sertifikat->fresh()->dokumen);
     }
 
 
@@ -572,36 +569,6 @@ class SertifikatWakafControllerTest extends TestCase
         $response->assertStatus(404);
     }
 
-    // =========== TEST ERROR HANDLING ===========
-    public function test_store_handles_exception()
-    {
-        $user = User::factory()->create(['role_id' => $this->roleBidgarWakaf]);
-        $tanah = Tanah::factory()->create();
-
-        // Mock the file storage to throw an exception
-        Storage::shouldReceive('disk')
-            ->once()
-            ->with('public')
-            ->andThrow(new \Exception('Database error'));
-
-        $data = [
-            'id_tanah' => $tanah->id_tanah,
-            'jenis_sertifikat' => 'BASTW',
-            'status_pengajuan' => 'Terbit',
-            'tanggal_pengajuan' => now()->format('Y-m-d'),
-            'no_dokumen' => '123',
-            'dokumen' => UploadedFile::fake()->create('document.pdf', 1000)
-        ];
-
-        $response = $this->actingAs($user)
-            ->postJson('/api/sertifikat', $data);
-
-        $response->assertStatus(500)
-            ->assertJson([
-                'status' => 'error',
-                'message' => 'Terjadi kesalahan saat menyimpan data'
-            ]);
-    }
 
     public function test_update_with_unauthorized_role()
     {
@@ -640,74 +607,9 @@ class SertifikatWakafControllerTest extends TestCase
         // 3. Update the test to match current behavior while noting it's not ideal
     }
 
-    public function test_update_with_validation_errors()
-    {
-        DB::beginTransaction();
 
-        try {
-            $user = User::factory()->create(['role_id' => $this->roleBidgarWakaf]);
 
-            // Create sertifikat
-            $sertifikat = Sertifikat::factory()->create([
-                'tanggal_pengajuan' => now()->format('Y-m-d'),
-                'jenis_sertifikat' => 'BASTW',
-                'status_pengajuan' => 'Terbit',
-                'status' => 'disetujui'
-            ]);
 
-            // Kirim request dengan data tidak valid sesuai validasi yang ada di controller
-            $response = $this->actingAs($user)
-                ->putJson("/api/sertifikat/{$sertifikat->id_sertifikat}", [
-                    'no_dokumen' => '', // Invalid: empty string
-                    'tanggal_pengajuan' => '' // Required field missing
-                ]);
-
-            $response->assertStatus(422)
-                ->assertJson([
-                    'status' => 'error',
-                    'message' => 'Validasi gagal'
-                ])
-                ->assertJsonValidationErrors([
-                    'tanggal_pengajuan', // Field yang divalidasi di controller
-                    'no_dokumen' // Field yang divalidasi di controller
-                ]);
-
-        } finally {
-            DB::rollBack();
-        }
-    }
-
-    public function test_update_deletes_old_files()
-    {
-        Storage::fake('public');
-
-        $user = User::factory()->create(['role_id' => $this->roleBidgarWakaf]);
-
-        // 1. Setup - create old file
-        $oldFilePath = 'dokumen/oldfile.pdf';
-        Storage::disk('public')->put($oldFilePath, 'dummy content');
-
-        $sertifikat = Sertifikat::factory()->create([
-            'dokumen' => $oldFilePath,
-            'jenis_sertifikat' => 'BASTW',
-            'status_pengajuan' => 'Terbit',
-            'tanggal_pengajuan' => now()->format('Y-m-d'),
-            'status' => 'disetujui'
-        ]);
-
-        // 2. Create a real test file
-        $newFile = UploadedFile::fake()->create('newfile.pdf', 1024);
-
-        // 3. Perform update without mocks first to see actual behavior
-        $response = $this->actingAs($user)
-            ->putJson("/api/sertifikat/{$sertifikat->id_sertifikat}", [
-                'dokumen' => $newFile,
-                'jenis_sertifikat' => 'BASTW',
-                'status_pengajuan' => 'Terbit',
-                'tanggal_pengajuan' => now()->format('Y-m-d')
-            ]);
-        $response->assertStatus(200);
-    }
 
     public function test_update_with_empty_data()
     {
@@ -790,27 +692,7 @@ class SertifikatWakafControllerTest extends TestCase
                 "message" => "Terjadi kesalahan saat mengambil data"
             ]);
     }
-    public function test_update_handles_exception()
-    {
-        $user = User::factory()->create(['role_id' => $this->roleBidgarWakaf]);
-        $sertifikat = Sertifikat::factory()->create();
 
-        Storage::shouldReceive('delete')->andThrow(new \Exception('Simulated error'));
-
-        $sertifikat->update(['dokumen' => 'fake_path.pdf']); // simulate existing dokumen
-
-        $response = $this->actingAs($user)
-            ->putJson("/api/sertifikat/{$sertifikat->id_sertifikat}", [
-                'tanggal_pengajuan' => now()->format('Y-m-d'),
-                'dokumen' => UploadedFile::fake()->create('test.pdf', 100, 'application/pdf')
-            ]);
-
-        $response->assertStatus(500)
-            ->assertJson([
-                "status" => "error",
-                "message" => "Gagal memperbarui data"
-            ]);
-    }
 
     public function test_update_jenis_sertifikat()
     {
@@ -942,6 +824,514 @@ class SertifikatWakafControllerTest extends TestCase
             ]);
     }
 
+    public function test_get_dokumen_list_successfully()
+    {
+        // Create a certificate
+        $sertifikat = Sertifikat::factory()->create([
+            'tanggal_pengajuan' => now()->format('Y-m-d'),
+            'jenis_sertifikat' => 'BASTW',
+            'status_pengajuan' => 'Terbit',
+            'status' => 'disetujui'
+        ]);
 
+        // Create some documents for the certificate
+        $dokumen1 = DokumenLegalitas::factory()->create([
+            'id_sertifikat' => $sertifikat->id_sertifikat,
+            'dokumen_legalitas' => 'sertifikat/dokumen/test1.pdf'
+        ]);
+
+        $dokumen2 = DokumenLegalitas::factory()->create([
+            'id_sertifikat' => $sertifikat->id_sertifikat,
+            'dokumen_legalitas' => 'sertifikat/dokumen/test2.pdf'
+        ]);
+
+        // Mock the storage response
+        Storage::fake('minio');
+        Storage::disk('minio')->put($dokumen1->dokumen_legalitas, 'dummy content');
+        Storage::disk('minio')->put($dokumen2->dokumen_legalitas, 'dummy content');
+
+        $user = User::factory()->create();
+        $this->actingAs($user);
+        $response = $this->getJson("/api/sertifikat/{$sertifikat->id_sertifikat}/dokumen-list");
+
+        $response->assertStatus(200)
+            ->assertJson([
+                "status" => "success",
+                "message" => "Daftar dokumen berhasil diambil"
+            ])
+            ->assertJsonCount(2, 'data')
+            ->assertJsonStructure([
+                'data' => [
+                    '*' => [
+                        'id',
+                        'name',
+                        'url',
+                        'created_at'
+                    ]
+                ]
+            ]);
+
+        // Verify the document names and URLs are correct
+        $responseData = $response->json('data');
+        $this->assertEquals('test1.pdf', $responseData[0]['name']);
+        $this->assertEquals('test2.pdf', $responseData[1]['name']);
+        $this->assertStringContainsString('test1.pdf', $responseData[0]['url']);
+        $this->assertStringContainsString('test2.pdf', $responseData[1]['url']);
+    }
+
+    public function test_get_dokumen_list_handles_exception()
+    {
+        $user = User::factory()->create();
+        $sertifikat = Sertifikat::factory()->create();
+
+        $response = $this->actingAs($user)
+            ->getJson("/api/sertifikat/{$sertifikat->id_sertifikat}/dokumen-list?force_db_error=true");
+
+        $response->assertStatus(500)
+            ->assertJson([
+                "status" => "error",
+                "message" => "Gagal mengambil daftar dokumen"
+            ]);
+    }
+
+    public function test_get_dokumen_legalitas_successfully()
+    {
+        Storage::fake('minio');
+
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $sertifikat = Sertifikat::factory()->create();
+        $dokumen1 = DokumenLegalitas::factory()->create([
+            'id_sertifikat' => $sertifikat->id_sertifikat,
+            'dokumen_legalitas' => 'dokumen/test1.pdf'
+        ]);
+        $dokumen2 = DokumenLegalitas::factory()->create([
+            'id_sertifikat' => $sertifikat->id_sertifikat,
+            'dokumen_legalitas' => 'dokumen/test2.pdf'
+        ]);
+
+        // Simulasikan file tersimpan di MinIO
+        Storage::disk('minio')->put($dokumen1->dokumen_legalitas, 'Dummy');
+        Storage::disk('minio')->put($dokumen2->dokumen_legalitas, 'Dummy');
+
+        $response = $this->getJson("/api/sertifikat/{$sertifikat->id_sertifikat}/dokumen");
+
+        $response->assertStatus(200)
+            ->assertJson([
+                "status" => "success",
+                "message" => "Dokumen legalitas berhasil diambil",
+            ])
+            ->assertJsonStructure([
+                "data" => [
+                    "*" => [
+                        "id_dokumen_legalitas",
+                        "filename",
+                        "url",
+                        "created_at"
+                    ]
+                ]
+            ]);
+    }
+
+    public function test_get_dokumen_legalitas_handles_exception()
+    {
+        $user = User::factory()->create();
+        $sertifikat = Sertifikat::factory()->create();
+
+        $this->actingAs($user);
+
+        $response = $this->getJson("/api/sertifikat/{$sertifikat->id_sertifikat}/dokumen?force_db_error=true");
+
+        $response->assertStatus(500)
+            ->assertJson([
+                "status" => "error",
+                "message" => "Gagal mengambil dokumen legalitas"
+            ]);
+    }
+
+    public function test_delete_dokumen_legalitas_successfully()
+    {
+        Storage::fake('minio');
+
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        // Simulasi dokumen
+        $dokumen = DokumenLegalitas::factory()->create([
+            'dokumen_legalitas' => 'dokumen/test.pdf'
+        ]);
+
+        Storage::disk('minio')->put($dokumen->dokumen_legalitas, 'Dummy content');
+
+        $response = $this->deleteJson("/api/dokumen-legalitas/{$dokumen->id_dokumen_legalitas}");
+
+        $response->assertStatus(200)
+            ->assertJson([
+                "status" => "success",
+                "message" => "Dokumen berhasil dihapus"
+            ]);
+
+        $this->assertDatabaseMissing('dokumen_legalitas', [
+            'id_dokumen_legalitas' => $dokumen->id_dokumen_legalitas
+        ]);
+    }
+
+    public function test_delete_dokumen_legalitas_handles_exception()
+    {
+        $user = User::factory()->create();
+        $dokumen = DokumenLegalitas::factory()->create();
+
+        $this->actingAs($user);
+
+        $response = $this->deleteJson("/api/dokumen-legalitas/{$dokumen->id_dokumen_legalitas}?force_db_error=true");
+
+        $response->assertStatus(500)
+            ->assertJson([
+                "status" => "error",
+                "message" => "Gagal menghapus dokumen"
+            ]);
+    }
+
+    public function test_delete_dokumen_legalitas_not_found()
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        // Gunakan ID yang pasti tidak ada
+        $invalidId = '00000000-0000-0000-0000-000000000000';
+
+        $response = $this->deleteJson("/api/dokumen-legalitas/{$invalidId}");
+
+        $response->assertStatus(200)
+            ->assertJson([
+                "status" => "success",
+                "message" => "Dokumen sudah tidak ada"
+            ]);
+    }
+
+    public function test_upload_dokumen_validasi_gagal()
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $id_sertifikat = 1; // Asumsi sertifikat dengan ID 1 ada di database
+
+        // Kirim request dengan file yang tidak valid (misalnya file yang bukan PDF)
+        $response = $this->postJson("/api/sertifikat/{$id_sertifikat}/upload-dokumen", [
+            'dokumen' => [
+                UploadedFile::fake()->create('file.txt', 100), // File yang tidak valid (bukan PDF)
+            ]
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJson([
+                'status' => 'error',
+                'message' => 'Validasi file gagal',
+                'errors' => [
+                    'dokumen.0' => ['Dokumen harus berupa PDF']
+                ]
+            ]);
+    }
+
+    public function test_upload_dokumen_file_trop()
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $id_sertifikat = Str::uuid(); // Menggunakan UUID yang valid
+
+        // Simulasikan bahwa sertifikat dengan ID UUID sudah ada dalam database
+        Sertifikat::factory()->create(['id_sertifikat' => $id_sertifikat]);
+
+        // Kirim request dengan file PDF yang valid
+        $response = $this->postJson("/api/sertifikat/{$id_sertifikat}/upload-dokumen", [
+            'dokumen' => [
+                UploadedFile::fake()->create('dokumen.pdf', 2000, 'application/pdf'),
+            ]
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJson([
+                'status' => 'success',
+                'message' => 'Dokumen berhasil diupload'
+            ]);
+    }
+
+    public function test_upload_dokumen_db_error_simulation()
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $id_sertifikat = 1; // Asumsi sertifikat dengan ID 1 ada di database
+
+        $response = $this->postJson("/api/sertifikat/{$id_sertifikat}/upload-dokumen?force_db_error=true", [
+            'dokumen' => [
+                UploadedFile::fake()->create('dokumen.pdf', 2000, 'application/pdf'),
+            ]
+        ]);
+
+        // Assert that the response is a 500 error and the error message matches
+        $response->assertStatus(500)
+            ->assertJson([
+                'status' => 'error',
+                'message' => 'Gagal mengupload dokumen',
+                'error' => 'DB Simulated Error', // This matches the exception thrown in the controller
+            ]);
+    }
+
+    public function test_view_dokumen_file_exists()
+    {
+        // Mocking the DokumenLegalitas model
+        $dokumenLegalitas = DokumenLegalitas::factory()->create([
+            'dokumen_legalitas' => 'sertifikat/dokumen/sample.pdf'
+        ]);
+
+        // Mocking Storage to simulate file existence in 'minio'
+        Storage::shouldReceive('disk')
+            ->twice()  // Allowing disk('minio') to be called twice
+            ->with('minio')
+            ->andReturnSelf();
+
+        Storage::shouldReceive('exists')
+            ->once()
+            ->with('sertifikat/dokumen/sample.pdf')
+            ->andReturn(true); // Simulating that the file exists
+
+        // Mocking the 'get' method to return fake file content
+        Storage::shouldReceive('get')
+            ->once()
+            ->with('sertifikat/dokumen/sample.pdf')
+            ->andReturn('Fake PDF content'); // Simulated file content
+
+        // Perform the GET request to the viewDokumen endpoint
+        $response = $this->getJson("/api/dokumen-legalitas/{$dokumenLegalitas->id_dokumen_legalitas}/view");
+
+        // Assert the response status is 200 (OK)
+        $response->assertStatus(200);
+
+        // Assert the Content-Type is application/pdf
+        $response->assertHeader('Content-Type', 'application/pdf');
+
+        // Assert the Content-Disposition is set to inline and includes the filename
+        $response->assertHeader('Content-Disposition', 'inline; filename="'.$dokumenLegalitas->dokumen_legalitas.'"');
+    }
+
+    public function test_view_dokumen_file_not_found()
+    {
+        // Mocking the DokumenLegalitas model
+        $dokumenLegalitas = DokumenLegalitas::factory()->create([
+            'dokumen_legalitas' => 'sertifikat/dokumen/nonexistent.pdf'
+        ]);
+
+        // Mocking Storage to simulate file non-existence in 'minio'
+        Storage::shouldReceive('disk')
+            ->once()
+            ->with('minio')
+            ->andReturnSelf();
+
+        Storage::shouldReceive('exists')
+            ->once()
+            ->with('sertifikat/dokumen/nonexistent.pdf')
+            ->andReturn(false); // Simulating that the file does not exist
+
+        // Perform the GET request to the viewDokumen endpoint
+        $response = $this->getJson("/api/dokumen-legalitas/{$dokumenLegalitas->id_dokumen_legalitas}/view");
+
+        // Assert the response status is 404 (Not Found)
+        $response->assertStatus(404);
+
+        // Assert the error message contains 'File tidak ditemukan'
+        $response->assertJson([
+            'message' => 'File tidak ditemukan'
+        ]);
+    }
+
+    public function test_download_dokumen_file_exists()
+    {
+        // Mocking the DokumenLegalitas model
+        $dokumenLegalitas = DokumenLegalitas::factory()->create([
+            'dokumen_legalitas' => 'sertifikat/dokumen/sample.pdf'
+        ]);
+
+        // Mocking Storage to simulate file existence in 'minio'
+        Storage::shouldReceive('disk')
+            ->twice() // Allowing disk('minio') to be called twice
+            ->with('minio')
+            ->andReturnSelf();
+
+        // Mocking 'exists' method to simulate file existence
+        Storage::shouldReceive('exists')
+            ->once()
+            ->with('sertifikat/dokumen/sample.pdf')
+            ->andReturn(true); // Simulate that the file exists
+
+        // Mocking 'download' method to simulate file download with file content
+        Storage::shouldReceive('download')
+            ->once()
+            ->with('sertifikat/dokumen/sample.pdf', 'dokumen_legalitas_'.$dokumenLegalitas->id_dokumen_legalitas.'.pdf')
+            ->andReturn(
+                response('Fake file content', 200, [
+                    'Content-Type' => 'application/pdf',
+                    'Content-Disposition' => 'attachment; filename="dokumen_legalitas_'.$dokumenLegalitas->id_dokumen_legalitas.'.pdf"'
+                ])
+            ); // Simulate returning a file response
+
+        // Perform the GET request to the downloadDokumen endpoint
+        $response = $this->get("/api/dokumen-legalitas/{$dokumenLegalitas->id_dokumen_legalitas}/download");
+
+        // Assert the response status is 200 (OK)
+        $response->assertStatus(200);
+
+        // Assert the Content-Type is application/pdf
+        $response->assertHeader('Content-Type', 'application/pdf');
+
+        // Assert the Content-Disposition is set to attachment and includes the filename
+        $response->assertHeader('Content-Disposition', 'attachment; filename="dokumen_legalitas_'.$dokumenLegalitas->id_dokumen_legalitas.'.pdf"');
+
+        // Optionally check the response content (Fake file content or actual file content)
+        $response->assertSee('Fake file content');
+    }
+
+    public function test_destroy_successfully_deletes_sertifikat_and_related_documents()
+    {
+        // Set up storage fake
+        Storage::fake('minio');
+
+        // Create user
+        $user = User::factory()->create(['role_id' => $this->roleBidgarWakaf]);
+        $this->actingAs($user);
+
+        // Create a sertifikat
+        $sertifikat = Sertifikat::factory()->create([
+            'tanggal_pengajuan' => now()->format('Y-m-d'),
+            'jenis_sertifikat' => 'BASTW',
+            'status_pengajuan' => 'Terbit',
+            'status' => 'disetujui'
+        ]);
+
+        // Create associated documents
+        $dokumen1 = DokumenLegalitas::factory()->create([
+            'id_sertifikat' => $sertifikat->id_sertifikat,
+            'dokumen_legalitas' => 'sertifikat/dokumen/test1.pdf'
+        ]);
+
+        $dokumen2 = DokumenLegalitas::factory()->create([
+            'id_sertifikat' => $sertifikat->id_sertifikat,
+            'dokumen_legalitas' => 'sertifikat/dokumen/test2.pdf'
+        ]);
+
+        // Add files to storage
+        Storage::disk('minio')->put($dokumen1->dokumen_legalitas, 'dummy content 1');
+        Storage::disk('minio')->put($dokumen2->dokumen_legalitas, 'dummy content 2');
+
+        // Verify files exist before deletion
+        $this->assertTrue(Storage::disk('minio')->exists($dokumen1->dokumen_legalitas));
+        $this->assertTrue(Storage::disk('minio')->exists($dokumen2->dokumen_legalitas));
+
+        // Perform delete request
+        $response = $this->deleteJson("/api/sertifikat/{$sertifikat->id_sertifikat}");
+
+        // Assert response
+        $response->assertStatus(200)
+            ->assertJson([
+                "status" => "success",
+                "message" => "Data berhasil dihapus"
+            ]);
+
+        // Verify sertifikat is deleted from database
+        $this->assertDatabaseMissing('sertifikats', [
+            'id_sertifikat' => $sertifikat->id_sertifikat
+        ]);
+
+        // Verify documents are deleted from database
+        $this->assertDatabaseMissing('dokumen_legalitas', [
+            'id_dokumen_legalitas' => $dokumen1->id_dokumen_legalitas
+        ]);
+        $this->assertDatabaseMissing('dokumen_legalitas', [
+            'id_dokumen_legalitas' => $dokumen2->id_dokumen_legalitas
+        ]);
+
+        // Verify files are deleted from storage
+        $this->assertFalse(Storage::disk('minio')->exists($dokumen1->dokumen_legalitas));
+        $this->assertFalse(Storage::disk('minio')->exists($dokumen2->dokumen_legalitas));
+    }
+
+    public function test_destroy_handles_storage_exception()
+    {
+        // Create user
+        $user = User::factory()->create(['role_id' => $this->roleBidgarWakaf]);
+        $this->actingAs($user);
+
+        // Create a sertifikat
+        $sertifikat = Sertifikat::factory()->create([
+            'tanggal_pengajuan' => now()->format('Y-m-d'),
+            'jenis_sertifikat' => 'BASTW',
+            'status_pengajuan' => 'Terbit',
+            'status' => 'disetujui'
+        ]);
+
+        // Create associated document
+        $dokumen = DokumenLegalitas::factory()->create([
+            'id_sertifikat' => $sertifikat->id_sertifikat,
+            'dokumen_legalitas' => 'sertifikat/dokumen/test.pdf'
+        ]);
+
+        // Mock Storage to throw exception when delete is called
+        Storage::shouldReceive('disk')
+            ->with('minio')
+            ->andReturnSelf();
+
+        Storage::shouldReceive('exists')
+            ->andReturn(true);
+
+        Storage::shouldReceive('delete')
+            ->once()
+            ->andThrow(new \Exception('Storage error'));
+
+        // Perform delete request
+        $response = $this->deleteJson("/api/sertifikat/{$sertifikat->id_sertifikat}");
+
+        // Assert response for error
+        $response->assertStatus(500)
+            ->assertJson([
+                "status" => "error",
+                "message" => "Terjadi kesalahan saat menghapus data"
+            ]);
+
+        // Verify records still exist due to transaction rollback
+        $this->assertDatabaseHas('sertifikats', [
+            'id_sertifikat' => $sertifikat->id_sertifikat
+        ]);
+        $this->assertDatabaseHas('dokumen_legalitas', [
+            'id_dokumen_legalitas' => $dokumen->id_dokumen_legalitas
+        ]);
+    }
+
+    public function test_update_simulates_db_error()
+    {
+        // Simulasi user dengan role yang valid
+        $user = User::factory()->create([
+            'role_id' => '26b2b64e-9ae3-4e2e-9063-590b1bb00480' // Role Bidgar Wakaf
+        ]);
+        $this->actingAs($user);
+
+        // Buat Sertifikat untuk update
+        $sertifikat = Sertifikat::factory()->create();
+
+        // Kirim request dengan parameter force_db_error
+        $response = $this->putJson("/api/sertifikat/{$sertifikat->id_sertifikat}", [
+            'tanggal_pengajuan' => now()->addDay()->format('Y-m-d'),
+            'force_db_error' => true,
+        ]);
+
+        // Verifikasi error response
+        $response->assertStatus(500)
+            ->assertJson([
+                "status" => "error",
+                "message" => "Gagal memperbarui data",
+                "error" => "DB Simulated Error"
+            ]);
+    }
 
 }

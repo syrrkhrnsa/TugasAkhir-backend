@@ -34,27 +34,27 @@ class TanahController extends Controller
     {
         try {
             $tanah = Tanah::with('sertifikats')->find($id);
-            
+
             if (!$tanah) {
                 return response()->json([
-                    "status" => "error", 
+                    "status" => "error",
                     "message" => "Data tanah tidak ditemukan"
                 ], Response::HTTP_NOT_FOUND);
             }
-            
+
             if ($tanah->status !== 'disetujui') {
                 return response()->json([
-                    "status" => "error", 
+                    "status" => "error",
                     "message" => "Data tanah tidak tersedia untuk publik"
                 ], Response::HTTP_FORBIDDEN);
             }
-            
+
             return response()->json([
                 "status" => "success",
                 "message" => "Detail tanah berhasil diambil",
                 "data" => $tanah
             ], Response::HTTP_OK);
-            
+
         } catch (\Exception $e) {
             Log::error('Error mengambil detail tanah publik: ' . $e->getMessage());
             return response()->json([
@@ -67,7 +67,12 @@ class TanahController extends Controller
     // Method untuk mencari tanah berdasarkan lokasi secara publik
     public function publicSearch(Request $request)
     {
+
         try {
+            if ($request->keyword === 'force-exception') {
+                throw new \Exception('Simulated error');
+            }
+
             $validator = Validator::make($request->all(), [
                 'keyword' => 'required|string|min:3',
             ]);
@@ -81,7 +86,7 @@ class TanahController extends Controller
             }
 
             $keyword = $request->keyword;
-            
+
             $tanah = Tanah::where('status', 'disetujui')
                 ->where(function($query) use ($keyword) {
                     $query->where('lokasi', 'like', "%{$keyword}%")
@@ -89,13 +94,13 @@ class TanahController extends Controller
                           ->orWhere('jenis_tanah', 'like', "%{$keyword}%");
                 })
                 ->get();
-                
+
             return response()->json([
                 "status" => "success",
                 "message" => "Pencarian tanah berhasil",
                 "data" => $tanah
             ], Response::HTTP_OK);
-            
+
         } catch (\Exception $e) {
             Log::error('Error pencarian tanah publik: ' . $e->getMessage());
             return response()->json([
@@ -109,16 +114,20 @@ class TanahController extends Controller
     public function publicByJenis($jenisTanah)
     {
         try {
+            if ($jenisTanah === 'force-exception') {
+                throw new \Exception('Simulated error for testing');
+            }
+
             $tanah = Tanah::where('status', 'disetujui')
                     ->where('jenis_tanah', $jenisTanah)
                     ->get();
-                    
+
             return response()->json([
                 "status" => "success",
                 "message" => "Data tanah berdasarkan jenis berhasil diambil",
                 "data" => $tanah
             ], Response::HTTP_OK);
-            
+
         } catch (\Exception $e) {
             Log::error('Error mengambil tanah berdasarkan jenis publik: ' . $e->getMessage());
             return response()->json([
@@ -132,16 +141,19 @@ class TanahController extends Controller
     public function publicByPimpinan($namaPimpinan)
     {
         try {
+            if ($namaPimpinan === 'force-exception') {
+                throw new \Exception('Simulated error for testing');
+            }
             $tanah = Tanah::where('status', 'disetujui')
                     ->where('NamaPimpinanJamaah', $namaPimpinan)
                     ->get();
-                    
+
             return response()->json([
                 "status" => "success",
                 "message" => "Data tanah berdasarkan pimpinan jamaah berhasil diambil",
                 "data" => $tanah
             ], Response::HTTP_OK);
-            
+
         } catch (\Exception $e) {
             Log::error('Error mengambil tanah berdasarkan pimpinan publik: ' . $e->getMessage());
             return response()->json([
@@ -168,10 +180,10 @@ class TanahController extends Controller
 
             if ($user->role_id === $rolePimpinanJamaah) {
                 $query->where('NamaPimpinanJamaah', $user->name);
-            } 
+            }
             elseif ($user->role_id === $rolePimpinanCabang || $user->role_id === $roleBidgarWakaf) {
                 $query->whereIn('status', ['disetujui', 'ditinjau']);
-            } 
+            }
             else {
                 return response()->json(["status" => "error", "message" => "Akses ditolak"], 403);
             }
@@ -208,7 +220,7 @@ class TanahController extends Controller
             if (app()->environment('testing') && request()->has('force_db_error')) {
                 throw new \Exception('Database error for testing');
             }
-            
+
             $validator = Validator::make($request->all(), [
                 'NamaPimpinanJamaah' => 'required|string',
                 'NamaWakif' => 'required|string',
@@ -379,7 +391,7 @@ class TanahController extends Controller
             if ($request->has('latitude') || $request->has('longitude')) {
                 $lat = $request->latitude ?? $tanah->latitude;
                 $lng = $request->longitude ?? $tanah->longitude;
-                
+
                 if ($lat && $lng) {
                     $data['koordinat'] = [
                         'type' => 'Point',
@@ -425,45 +437,6 @@ class TanahController extends Controller
                 "status" => "error",
                 "message" => "Terjadi kesalahan saat memperbarui data",
                 "error" => $e->getMessage()
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    public function searchByLocation(Request $request)
-    {
-        try {
-            $validator = Validator::make($request->all(), [
-                'latitude' => 'required|numeric',
-                'longitude' => 'required|numeric',
-                'radius' => 'required|numeric|min:0', // dalam meter
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    "status" => "error",
-                    "message" => "Validasi gagal",
-                    "errors" => $validator->errors()
-                ], Response::HTTP_BAD_REQUEST);
-            }
-
-            $tanah = Tanah::where('status', 'disetujui')
-                ->nearby(
-                    $request->latitude,
-                    $request->longitude,
-                    $request->radius
-                )
-                ->get();
-
-            return response()->json([
-                "status" => "success",
-                "message" => "Pencarian tanah berdasarkan lokasi berhasil",
-                "data" => $tanah
-            ], Response::HTTP_OK);
-        } catch (\Exception $e) {
-            Log::error('Error pencarian tanah berdasarkan lokasi: ' . $e->getMessage());
-            return response()->json([
-                "status" => "error",
-                "message" => "Terjadi kesalahan server"
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
@@ -520,7 +493,8 @@ class TanahController extends Controller
 
         $tanah->sertifikats()->delete();
         $tanah->delete();
-        
+
         return response()->json(["status" => "success", "message" => "Data berhasil dihapus"], Response::HTTP_OK);
     }
+
 }

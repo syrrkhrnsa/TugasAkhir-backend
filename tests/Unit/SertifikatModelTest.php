@@ -5,6 +5,7 @@ namespace Tests\Unit\Models;
 use App\Models\Sertifikat;
 use App\Models\Tanah;
 use App\Models\User;
+use App\Models\DokumenLegalitas;
 use App\Models\Approval;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -25,7 +26,6 @@ class SertifikatModelTest extends TestCase
         $expected = [
             'id_sertifikat',
             'no_dokumen',
-            'dokumen',
             'jenis_sertifikat',
             'status_pengajuan',
             'tanggal_pengajuan',
@@ -73,5 +73,14 @@ class SertifikatModelTest extends TestCase
         $this->assertInstanceOf(HasMany::class, $relation);
         $this->assertEquals('data_id', $relation->getForeignKeyName());
         $this->assertInstanceOf(Approval::class, $relation->getRelated());
+    }
+
+    public function testDokumenLegalitasRelationship()
+    {
+        $relation = $this->sertifikat->dokumenLegalitas();
+        $this->assertInstanceOf(HasMany::class, $relation);
+        $this->assertEquals('id_sertifikat', $relation->getForeignKeyName());
+        $this->assertEquals('id_sertifikat', $relation->getLocalKeyName());
+        $this->assertInstanceOf(DokumenLegalitas::class, $relation->getRelated());
     }
 }

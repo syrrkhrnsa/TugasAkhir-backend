@@ -16,7 +16,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Role;
+use App\Models\Sertifikat;
+use Symfony\Component\HttpFoundation\Response;
 use App\Notifications\ApprovalNotification;
+use Illuminate\Support\Facades\Log;
 
 class TanahControllerTest extends TestCase
 {
@@ -655,4 +658,344 @@ class TanahControllerTest extends TestCase
             'legalitas' => 'SHM'
         ]);
     }
+
+    public function test_public_show_returns_tanah_details_when_approved()
+    {
+        // Create an approved tanah record
+        $tanah = Tanah::factory()->create([
+            'status' => 'disetujui'
+        ]);
+
+        // Create a certificate associated with this tanah
+        $sertifikat = Sertifikat::factory()->withTanah($tanah)->create([
+            'id_tanah' => $tanah->id_tanah,
+            // Make sure we're only using fields that exist in the database
+            // Remove 'dokumen' field if it doesn't exist in your DB
+            // If you have a newer schema, adjust accordingly
+        ]);
+
+        // Make the request to the publicShow endpoint
+        $response = $this->getJson("/api/tanah/public/{$tanah->id_tanah}");
+
+        // Assert the response is successful and contains the expected data
+        $response->assertStatus(200)
+            ->assertJson([
+                'status' => 'success',
+                'message' => 'Detail tanah berhasil diambil',
+                'data' => [
+                    'id_tanah' => (string)$tanah->id_tanah,
+                    'status' => 'disetujui'
+                ]
+            ]);
+
+        // Check that the sertifikats relation is included
+        // Update this line to match your actual JSON structure and field names
+        $response->assertJsonPath('data.sertifikats.0.id_sertifikat', (string)$sertifikat->id_sertifikat);
+    }
+
+    public function test_public_show_returns_404_for_nonexistent_tanah()
+    {
+        // Generate a random UUID that doesn't exist in the database
+        $nonExistentId = Str::uuid();
+
+        // Make the request with a non-existent ID
+        $response = $this->getJson("/api/tanah/public/{$nonExistentId}");
+
+        // Assert we get a 404 response with the expected error message
+        $response->assertStatus(404)
+            ->assertJson([
+                'status' => 'error',
+                'message' => 'Data tanah tidak ditemukan'
+            ]);
+    }
+
+    public function test_public_show_returns_403_for_unapproved_tanah()
+    {
+        // Create tanah records with statuses other than 'disetujui'
+        $pendingTanah = Tanah::factory()->create(['status' => 'ditinjau']);
+        $rejectedTanah = Tanah::factory()->create(['status' => 'ditolak']);
+
+        // Test with pending tanah
+        $response1 = $this->getJson("/api/tanah/public/{$pendingTanah->id_tanah}");
+        $response1->assertStatus(403)
+            ->assertJson([
+                'status' => 'error',
+                'message' => 'Data tanah tidak tersedia untuk publik'
+            ]);
+
+        // Test with rejected tanah
+        $response2 = $this->getJson("/api/tanah/public/{$rejectedTanah->id_tanah}");
+        $response2->assertStatus(403)
+            ->assertJson([
+                'status' => 'error',
+                'message' => 'Data tanah tidak tersedia untuk publik'
+            ]);
+    }
+
+    public function test_public_show_handles_exceptions_simple()
+    {
+        // Create a fake ID that will cause the database to throw an exception
+        // This is a hacky approach but often works for simple cases
+        $fakeId = 'not-a-valid-uuid';
+
+        // Make the request with the invalid ID
+        $response = $this->getJson("/api/tanah/public/{$fakeId}");
+
+        // Assert we get a 500 response
+        $response->assertStatus(500);
+    }
+
+    public function test_public_search_returns_validation_error_when_keyword_missing()
+    {
+        // Send request without keyword
+        $response = $this->getJson('/api/tanah/search/public');
+
+        // Assert validation error response
+        $response->assertStatus(Response::HTTP_BAD_REQUEST)
+            ->assertJson([
+                "status" => "error",
+                "message" => "Validasi gagal"
+            ])
+            ->assertJsonValidationErrors(['keyword']);
+    }
+
+    public function test_public_search_returns_validation_error_when_keyword_too_short()
+    {
+        // Send request with too short keyword
+        $response = $this->getJson('/api/tanah/search/public?keyword=ab');
+
+        // Assert validation error response
+        $response->assertStatus(Response::HTTP_BAD_REQUEST)
+            ->assertJson([
+                "status" => "error",
+                "message" => "Validasi gagal"
+            ])
+            ->assertJsonValidationErrors(['keyword']);
+    }
+
+    public function test_public_search_returns_matching_records_by_lokasi()
+    {
+        // Create approved tanah with matching lokasi
+        $matchingTanah = Tanah::factory()->create([
+            'lokasi' => 'Jalan Cendrawasih',
+            'status' => 'disetujui'
+        ]);
+
+        // Create non-matching tanah
+        Tanah::factory()->create([
+            'lokasi' => 'Jalan Kenari',
+            'status' => 'disetujui'
+        ]);
+
+        // Send search request
+        $response = $this->getJson('/api/tanah/search/public?keyword=Cendra');
+
+        // Assert response contains only matching record
+        $response->assertStatus(Response::HTTP_OK)
+            ->assertJson([
+                "status" => "success",
+                "message" => "Pencarian tanah berhasil"
+            ])
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id_tanah', (string)$matchingTanah->id_tanah);
+    }
+
+    public function test_public_search_handles_exception_simple()
+    {
+        // Keyword khusus untuk memicu exception di controller
+        $keyword = 'force-exception';
+
+        // Kirim request ke endpoint dengan keyword pemicu
+        $response = $this->getJson("/api/tanah/search/public?keyword={$keyword}");
+
+        // Assert bahwa kita menerima response 500
+        $response->assertStatus(500);
+    }
+
+    private $validJenis = [
+        'sawah',
+        'kebun',
+        'pekarangan',
+        'ladang',
+        'hutan'
+    ];
+
+    /** @test */
+    public function it_returns_approved_lands_by_type()
+    {
+        // Buat data tanah yang disetujui dengan jenis tertentu
+        $approvedLands = Tanah::factory()->count(3)->create([
+            'jenis_tanah' => 'sawah',
+            'status' => 'disetujui'
+        ]);
+
+        // Buat data tanah dengan status lain yang tidak seharusnya muncul
+        Tanah::factory()->create(['jenis_tanah' => 'sawah', 'status' => 'ditinjau']);
+        Tanah::factory()->create(['jenis_tanah' => 'sawah', 'status' => 'ditolak']);
+        Tanah::factory()->create(['jenis_tanah' => 'kebun', 'status' => 'disetujui']);
+
+        $response = $this->getJson('/api/tanah/jenis/sawah/public');
+
+        $response->assertStatus(Response::HTTP_OK)
+            ->assertJson([
+                'status' => 'success',
+                'message' => 'Data tanah berdasarkan jenis berhasil diambil'
+            ])
+            ->assertJsonCount(3, 'data'); // Hanya 3 data sawah yang disetujui
+    }
+
+    /** @test */
+    public function test_public_by_jenis_handles_exception_simple()
+    {
+        // Jenis tanah khusus untuk memicu exception di controller
+        $jenisTanah = 'force-exception';
+
+        // Kirim request ke endpoint dengan jenis tanah pemicu
+        $response = $this->getJson("/api/tanah/jenis/{$jenisTanah}/public");
+
+        // Assert bahwa kita menerima response 500
+        $response->assertStatus(Response::HTTP_INTERNAL_SERVER_ERROR)
+            ->assertJson([
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan server'
+            ]);
+    }
+
+    /** @test */
+    public function it_returns_approved_lands_by_pimpinan_name()
+    {
+        // Nama pimpinan yang digunakan untuk filter
+        $pimpinanName = 'PimpinanJamaah';
+
+        // Buat data tanah yang disetujui dengan nama pimpinan tertentu
+        $approvedLands = Tanah::factory()->count(2)->create([
+            'NamaPimpinanJamaah' => $pimpinanName,
+            'status' => 'disetujui'
+        ]);
+
+        // Buat data tanah dengan status lain yang tidak seharusnya muncul
+        Tanah::factory()->create(['NamaPimpinanJamaah' => $pimpinanName, 'status' => 'ditinjau']);
+        Tanah::factory()->create(['NamaPimpinanJamaah' => $pimpinanName, 'status' => 'ditolak']);
+        Tanah::factory()->create(['NamaPimpinanJamaah' => 'Pimpinan Lain', 'status' => 'disetujui']);
+
+        // Kirim permintaan ke API
+        $response = $this->getJson("/api/tanah/pimpinan/".urlencode($pimpinanName)."/public");
+
+        // Memastikan bahwa status kode yang diterima adalah 200 OK
+        $response->assertStatus(Response::HTTP_OK)
+            ->assertJson([
+                'status' => 'success',
+                'message' => 'Data tanah berdasarkan pimpinan jamaah berhasil diambil'
+            ])
+            // Pastikan hanya 2 data yang sesuai dengan NamaPimpinanJamaah dan status 'disetujui'
+            ->assertJsonCount(2, 'data')
+            // Memastikan NamaPimpinanJamaah ada dalam data yang diterima
+            ->assertJsonFragment(['NamaPimpinanJamaah' => $pimpinanName])
+            // Memastikan data dengan NamaPimpinanJamaah 'Pimpinan Lain' tidak ada
+            ->assertJsonMissing(['NamaPimpinanJamaah' => 'Pimpinan Lain']);
+    }
+
+    /** @test */
+    public function it_handles_server_error_when_exception_occurs()
+    {
+        // Simulasikan exception
+        $this->withoutExceptionHandling(); // Mematikan penanganan pengecualian oleh Laravel untuk melihat output asli
+        $namaPimpinan = 'force-exception'; // Nama pimpinan yang menyebabkan exception
+
+        // Menggunakan mock untuk memaksa exception dilempar di dalam controller
+        // Simulasi error pada method publicByPimpinan
+        $response = $this->getJson("/api/tanah/pimpinan/".urlencode($namaPimpinan)."/public");
+
+        // Memastikan status kode yang diterima adalah HTTP 500 (Internal Server Error)
+        $response->assertStatus(Response::HTTP_INTERNAL_SERVER_ERROR)
+            // Memastikan pesan error yang benar dikembalikan
+            ->assertJson([
+                "status" => "error",
+                "message" => "Terjadi kesalahan server"
+            ]);
+    }
+
+    public function test_store_handles_coordinates_correctly()
+    {
+        $user = User::factory()->create([
+            'role_id' => '3594bece-a684-4287-b0a2-7429199772a3'
+        ]);
+        $this->actingAs($user);
+
+        $response = $this->postJson('/api/tanah', [
+            'NamaPimpinanJamaah' => 'Test Pimpinan',
+            'NamaWakif' => 'Test Wakif',
+            'lokasi' => 'Test Lokasi',
+            'luasTanah' => '100',
+            'latitude' => -6.2,
+            'longitude' => 106.816666,
+        ]);
+
+        $response->assertStatus(201);
+
+        // Cek latitude & longitude biasa
+        $this->assertDatabaseHas('tanahs', [
+            'latitude' => -6.2,
+            'longitude' => 106.816666,
+        ]);
+
+        // ✅ Cek koordinat pakai raw query karena tipe kolomnya spatial
+        $exists = DB::table('tanahs')
+            ->whereRaw("ST_AsText(koordinat) = 'POINT(106.816666 -6.2)'")
+            ->exists();
+
+        $this->assertTrue($exists, 'Koordinat POINT tidak ditemukan di database.');
+    }
+
+    public function test_update_koordinat_successfully()
+    {
+        // Buat user dengan role non-pimpinan jamaah (langsung update, bukan approval)
+        $user = User::factory()->create([
+            'role_id' => '3594bece-a684-4287-b0a2-7429199772a3'
+        ]);
+
+        // Login sebagai user
+        $this->actingAs($user);
+
+        // Buat data tanah awal
+        $tanah = Tanah::factory()->create([
+            'latitude' => -6.1,
+            'longitude' => 106.7,
+        ]);
+
+        // Set koordinat awal secara manual ke PostGIS
+        DB::table('tanahs')->where('id_tanah', $tanah->id_tanah)->update([
+            'koordinat' => DB::raw("ST_GeomFromText('POINT(106.7 -6.1)', 4326)")
+        ]);
+
+        // Kirim request update dengan koordinat baru
+        $response = $this->putJson("/api/tanah/{$tanah->id_tanah}", [
+            'latitude' => -6.2,
+            'longitude' => 106.816666
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'status' => 'success',
+                'message' => 'Data tanah berhasil diperbarui.'
+            ]);
+
+        // Pastikan latitude dan longitude diupdate
+        $this->assertDatabaseHas('tanahs', [
+            'id_tanah' => $tanah->id_tanah,
+            'latitude' => -6.2,
+            'longitude' => 106.816666,
+        ]);
+
+        // Cek koordinat menggunakan ST_AsText
+        $this->assertTrue(
+            DB::table('tanahs')
+                ->where('id_tanah', $tanah->id_tanah)
+                ->whereRaw("ST_AsText(koordinat) = 'POINT(106.816666 -6.2)'")
+                ->exists()
+        );
+    }
+
+
+
 }

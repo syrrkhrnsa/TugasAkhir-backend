@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Casts\GeometryCast;
@@ -9,6 +10,9 @@ use Illuminate\Support\Facades\DB;
 
 class PemetaanFasilitas extends Model
 {
+    use HasFactory;
+
+
     protected $table = 'pemetaan_fasilitas';
     protected $primaryKey = 'id_pemetaan_fasilitas';
     protected $keyType = 'string';
