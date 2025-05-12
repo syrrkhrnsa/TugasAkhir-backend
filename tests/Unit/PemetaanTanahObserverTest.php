@@ -23,6 +23,8 @@ class PemetaanTanahObserverTest extends TestCase
 
         // Ensure Auth facade is properly mocked before each test
         Auth::spy();
+        PemetaanTanah::observe(\App\Observers\PemetaanTanahObserver::class);
+
     }
 
     protected function tearDown(): void
