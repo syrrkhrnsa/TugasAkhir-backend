@@ -24,7 +24,7 @@ class InventarisController extends Controller
         $inventaris = Inventaris::with(['fasilitas'])
             ->where('id_fasilitas', $id)
             ->get();
-    
+
         return response()->json([
             "status" => "success",
             "data" => $inventaris
@@ -64,6 +64,10 @@ class InventarisController extends Controller
         }
 
         try {
+            if (app()->environment('testing') && $request->has('force_db_error')) {
+                throw new \Exception('Database error for testing');
+            }
+
             $user = Auth::user();
             if (!$user) {
                 return response()->json(["status" => "error", "message" => "User tidak terautentikasi"], 401);
@@ -128,6 +132,10 @@ class InventarisController extends Controller
         }
 
         try {
+            if (app()->environment('testing') && $request->has('force_db_error')) {
+                throw new \Exception('Database error for testing');
+            }
+
             $inventaris->update($request->all());
 
             return response()->json([
@@ -151,6 +159,7 @@ class InventarisController extends Controller
         $inventaris = Inventaris::findOrFail($id);
 
         try {
+
             $inventaris->delete();
 
             return response()->json([
@@ -182,7 +191,7 @@ class InventarisController extends Controller
                 'waktu_perolehan'
             ])
             ->get();
-    
+
         return response()->json([
             "status" => "success",
             "data" => $inventaris
@@ -194,7 +203,7 @@ class InventarisController extends Controller
         try {
             // Cari fasilitas berdasarkan id_pemetaan_fasilitas
             $fasilitas = Fasilitas::where('id_pemetaan_fasilitas', $id_pemetaan_fasilitas)->first();
-            
+
             if (!$fasilitas) {
                 return response()->json([
                     "status" => "error",
@@ -215,12 +224,12 @@ class InventarisController extends Controller
                     'waktu_perolehan'
                 ])
                 ->get();
-            
+
             return response()->json([
                 "status" => "success",
                 "data" => $inventaris
             ]);
-            
+
         } catch (\Exception $e) {
             return response()->json([
                 "status" => "error",

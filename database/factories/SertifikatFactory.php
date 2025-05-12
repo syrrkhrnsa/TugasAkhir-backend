@@ -20,7 +20,6 @@ class SertifikatFactory extends Factory
             'no_dokumen' => $this->faker->numerify('BASTW-####'),
             'status' => 'ditinjau',
             'user_id' => User::factory(),
-            'dokumen' => null,
             'jenis_sertifikat'=> 'BASTW',
             'status_pengajuan' => 'Terbit',
             'tanggal_pengajuan' => now()->format('Y-m-d'),
