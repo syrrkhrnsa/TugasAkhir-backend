@@ -15,6 +15,7 @@ use App\Http\Controllers\PemetaanFasilitasController;
 use App\Http\Controllers\MinioUploadController;
 use App\Http\Controllers\FasilitasController;
 use App\Http\Controllers\InventarisController;
+use App\Http\Controllers\FasilitasFileController;
 
 /*
 |--------------------------------------------------------------------------
@@ -63,6 +64,8 @@ Route::delete('/certificate/delete/{filename}', [MinioUploadController::class, '
 
 Route::get('/dokumen-legalitas/{id_dokumen_legalitas}/view', [sertifikatWakafController::class, 'viewDokumen']);
 Route::get('/dokumen-legalitas/{id_dokumen_legalitas}/download', [sertifikatWakafController::class, 'downloadDokumen']);
+
+Route::get('fasilitas/files/{id}/view', [FasilitasFileController::class, 'viewFile']);
 
 // Public route untuk akses GeoTIFF
 Route::get('/geotiff/{filename}', function ($filename) {
@@ -159,12 +162,18 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
 
     // Fasilitas Routes
     Route::prefix('fasilitas')->group(function () {
-        Route::get('/', [FasilitasController::class, 'index']);
-        Route::post('/', [FasilitasController::class, 'store']);
-        Route::get('/{id}', [FasilitasController::class, 'show']);
-        Route::put('/{id}', [FasilitasController::class, 'update']);
-        Route::delete('/{id}', [FasilitasController::class, 'destroy']);
-        Route::get('/pemetaan/{id_pemetaan_fasilitas}', [FasilitasController::class, 'showByPemetaanFasilitas']);
+         Route::get('/', [FasilitasController::class, 'index']);
+    Route::post('/', [FasilitasController::class, 'store']);
+    Route::get('/{id}', [FasilitasController::class, 'show']);
+    Route::put('/{id}', [FasilitasController::class, 'update']);
+    Route::delete('/{id}', [FasilitasController::class, 'destroy']);
+    Route::get('/pemetaan/{id_pemetaan_fasilitas}', [FasilitasController::class, 'showByPemetaanFasilitas']);
+    Route::get('/by-pemetaan/{id_pemetaan_fasilitas}', [FasilitasController::class, 'findByPemetaan']);
+    
+    // File routes
+    Route::post('/{id}/files', [FasilitasFileController::class, 'upload']);
+    Route::get('/{id}/files', [FasilitasFileController::class, 'show']);
+    Route::delete('/files/{id}', [FasilitasFileController::class, 'destroy']);;
     });
 
     // Inventaris Routes
