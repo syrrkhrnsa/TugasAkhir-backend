@@ -49,23 +49,6 @@ class PemetaanTanahController extends Controller
         }
     }
 
-    public function ShowDetail($id)
-    {
-        try {
-            $pemetaan = PemetaanTanah::with(['tanah', 'fasilitas'])->findOrFail($id);
-            return response()->json([
-                'status' => 'success',
-                'data' => $pemetaan
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Pemetaan tanah tidak ditemukan',
-                'error' => $e->getMessage()
-            ], 404);
-        }
-    }
-
     // Metode untuk melihat semua pemetaan tanah berdasarkan id tanah tertentu tanpa login
     public function publicByTanah($tanahId)
     {
@@ -86,17 +69,17 @@ class PemetaanTanahController extends Controller
                     'message' => 'User ID harus disediakan'
                 ], 400);
             }
-            
+
             // Ambil data pemetaan tanah oleh user dengan relasi tanah
             $pemetaanTanah = PemetaanTanah::where('id_user', $userId)
                 ->with(['tanah'])
                 ->get();
-            
+
             return response()->json([
                 'status' => 'success',
                 'data' => $pemetaanTanah
             ]);
-            
+
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
@@ -117,18 +100,18 @@ class PemetaanTanahController extends Controller
                     'message' => 'User ID harus disediakan'
                 ], 400);
             }
-            
+
             // Ambil data pemetaan tanah beserta relasi tanah dan fasilitas
             $pemetaanTanah = PemetaanTanah::where('id_pemetaan_tanah', $idPemetaanTanah)
                 ->where('id_user', $userId)
                 ->with(['tanah', 'fasilitas'])
                 ->firstOrFail();
-            
+
             return response()->json([
                 'status' => 'success',
                 'data' => $pemetaanTanah
             ]);
-            
+
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
@@ -137,7 +120,7 @@ class PemetaanTanahController extends Controller
             ], 404);
         }
     }
-    
+
     public function index($tanahId)
     {
         $pemetaan = PemetaanTanah::where('id_tanah', $tanahId)->get();
@@ -218,7 +201,7 @@ class PemetaanTanahController extends Controller
                 $coordinates = $geojson['coordinates'][0]; // Get the outer ring
                 $area = 0;
                 $n = count($coordinates);
-                
+
                 if ($n > 2) {
                     for ($i = 0; $i < $n; $i++) {
                         $j = ($i + 1) % $n;
@@ -226,23 +209,23 @@ class PemetaanTanahController extends Controller
                         $yi = $coordinates[$i][1];
                         $xj = $coordinates[$j][0];
                         $yj = $coordinates[$j][1];
-                        
+
                         $area += ($xi * $yj) - ($xj * $yi);
                     }
-                    
+
                     $area = abs($area / 2);
-                    
+
                     // Convert from degree² to m² (approximate)
                     // Note: This is a simplified calculation and may not be accurate for large areas
                     // For more accurate results, consider using a library like turf.js or PostGIS functions
                     $earthCircumference = 40075000; // meters
                     $degreesToMeters = $earthCircumference / 360;
                     $area = $area * pow($degreesToMeters, 2);
-                    
+
                     return round($area, 2);
                 }
             }
-            
+
             return 0;
         } catch (\Exception $e) {
             Log::error('Area calculation error', ['error' => $e->getMessage()]);
