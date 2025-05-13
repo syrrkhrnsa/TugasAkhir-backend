@@ -6,6 +6,7 @@ use App\Models\Fasilitas;
 use App\Models\PemetaanFasilitas;
 use App\Models\Tanah;
 use App\Models\Inventaris;
+use App\Models\FilePendukungFasilitas;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Tests\TestCase;
@@ -26,9 +27,6 @@ class FasilitasModelTest extends TestCase
             'id_fasilitas',
             'id_pemetaan_fasilitas',
             'id_tanah',
-            'file_360',
-            'file_gambar',
-            'file_pdf',
             'catatan'
         ];
 
@@ -77,5 +75,13 @@ class FasilitasModelTest extends TestCase
         $this->assertInstanceOf(Inventaris::class, $relation->getRelated());
     }
 
+    public function testFilePendukungRelationship()
+    {
+        $relation = $this->fasilitas->filePendukung();
 
+        $this->assertInstanceOf(HasMany::class, $relation);
+        $this->assertEquals('id_fasilitas', $relation->getForeignKeyName());
+        $this->assertEquals('id_fasilitas', $relation->getLocalKeyName());
+        $this->assertInstanceOf(FilePendukungFasilitas::class, $relation->getRelated());
+    }
 }

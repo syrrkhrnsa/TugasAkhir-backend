@@ -147,4 +147,27 @@ class UserControllerTest extends TestCase
                 'message' => 'User  not found', // Pastikan pesan ini sesuai dengan yang dikembalikan oleh controller
             ]);
     }
+
+    public function testDatauserRoute()
+    {
+        $response = $this->getJson('api/datauser');
+
+        $response->assertStatus(200)
+            ->assertJsonStructure([
+                'success',
+                'message',
+                'data' => [
+                    '*' => [
+                        'username',
+                        'password',
+                        'nama_jamaah',
+                        'name_role'
+                    ]
+                ]
+            ])
+            ->assertJson([
+                'success' => true,
+                'message' => 'Data user berhasil diambil.'
+            ]);
+    }
 }
