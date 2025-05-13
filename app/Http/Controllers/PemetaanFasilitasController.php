@@ -50,23 +50,6 @@ class PemetaanFasilitasController extends Controller
         }
     }
 
-    public function ShowDetail($id)
-    {
-        try {
-            $fasilitas = PemetaanFasilitas::with('pemetaanTanah')->findOrFail($id);
-            return response()->json([
-                'status' => 'success',
-                'data' => $fasilitas
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Pemetaan fasilitas tidak ditemukan',
-                'error' => $e->getMessage()
-            ], 404);
-        }
-    }
-
     // Metode untuk melihat semua fasilitas berdasarkan id pemetaan tanah tertentu tanpa login
     public function publicByPemetaanTanah($pemetaanTanahId)
     {
@@ -99,17 +82,17 @@ class PemetaanFasilitasController extends Controller
                     'message' => 'User ID harus disediakan'
                 ], 400);
             }
-            
+
             // Ambil data pemetaan fasilitas oleh user dengan relasi pemetaan tanah
             $pemetaanFasilitas = PemetaanFasilitas::where('id_user', $userId)
                 ->with(['pemetaanTanah', 'pemetaanTanah.tanah'])
                 ->get();
-            
+
             return response()->json([
                 'status' => 'success',
                 'data' => $pemetaanFasilitas
             ]);
-            
+
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
@@ -129,18 +112,18 @@ class PemetaanFasilitasController extends Controller
                     'message' => 'User ID harus disediakan'
                 ], 400);
             }
-            
+
             // Ambil data pemetaan fasilitas beserta relasi pemetaan tanah dan tanah
             $pemetaanFasilitas = PemetaanFasilitas::where('id_pemetaan_fasilitas', $idPemetaanFasilitas)
                 ->where('id_user', $userId)
                 ->with(['pemetaanTanah', 'pemetaanTanah.tanah'])
                 ->firstOrFail();
-            
+
             return response()->json([
                 'status' => 'success',
                 'data' => $pemetaanFasilitas
             ]);
-            
+
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
@@ -149,7 +132,7 @@ class PemetaanFasilitasController extends Controller
             ], 404);
         }
     }
-    
+
     public function index($pemetaanTanahId)
     {
         $fasilitas = PemetaanFasilitas::where('id_pemetaan_tanah', $pemetaanTanahId)->get();
@@ -230,7 +213,7 @@ class PemetaanFasilitasController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Gagal membuat pemetaan fasilitas',
@@ -247,7 +230,7 @@ class PemetaanFasilitasController extends Controller
                 'pemetaanTanah.tanah',
                 'user'
             ])->findOrFail($id);
-    
+
             return response()->json([
                 'status' => 'success',
                 'data' => $fasilitas
@@ -295,7 +278,9 @@ class PemetaanFasilitasController extends Controller
                 $geojson = json_decode($request->geometri, true);
                 $wkt = $this->geojsonToWkt($geojson, $request->jenis_geometri);
                 $updateData['jenis_geometri'] = $request->jenis_geometri;
-                $updateData['geometri'] = DB::raw("ST_GeomFromText('$wkt', 4326)");
+
+                // Instead of using DB::raw, we'll use the WKT directly and let the cast handle it
+                $updateData['geometri'] = $wkt;
             }
 
             $fasilitas->update($updateData);
@@ -303,9 +288,14 @@ class PemetaanFasilitasController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'Pemetaan fasilitas berhasil diperbarui',
-                'data' => $fasilitas
+                'data' => $fasilitas->fresh() // Use fresh() to get the updated model with casted geometry
             ]);
 
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Pemetaan fasilitas tidak ditemukan'
+            ], 404);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
@@ -326,6 +316,11 @@ class PemetaanFasilitasController extends Controller
                 'message' => 'Pemetaan fasilitas berhasil dihapus'
             ]);
 
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Pemetaan fasilitas tidak ditemukan'
+            ], 404);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
