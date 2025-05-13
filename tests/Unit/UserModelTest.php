@@ -8,11 +8,14 @@ use App\Models\ActivityLog;
 use App\Models\Tanah;
 use App\Models\Sertifikat;
 use App\Models\CustomNotification;
+use App\Models\PemetaanTanah;
+use App\Models\PemetaanFasilitas;
 use Mockery;
 use Tests\TestCase;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Support\Str;
 
 class UserModelTest extends TestCase
 {
@@ -90,5 +93,21 @@ class UserModelTest extends TestCase
         $relation = $this->user->notifications();
         $this->assertInstanceOf(MorphMany::class, $relation);
         $this->assertInstanceOf(CustomNotification::class, $relation->getRelated());
+    }
+
+    public function testPemetaanTanahRelationship()
+    {
+        $relation = $this->user->pemetaanTanah();
+        $this->assertInstanceOf(HasMany::class, $relation);
+        $this->assertInstanceOf(PemetaanTanah::class, $relation->getRelated());
+        $this->assertEquals('id_user', $relation->getForeignKeyName());
+    }
+
+    public function testPemetaanFasilitasRelationship()
+    {
+        $relation = $this->user->pemetaanFasilitas();
+        $this->assertInstanceOf(HasMany::class, $relation);
+        $this->assertInstanceOf(PemetaanFasilitas::class, $relation->getRelated());
+        $this->assertEquals('id_user', $relation->getForeignKeyName());
     }
 }

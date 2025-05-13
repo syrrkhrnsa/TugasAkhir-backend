@@ -30,7 +30,6 @@ class FasilitasFactory extends Factory
                 return DB::table('pemetaan_fasilitas')->insertGetId(
                     [
                         'id_pemetaan_fasilitas' => $this->faker->uuid(),
-                        'nama' => $this->faker->word,
                         'created_at' => now(),
                         'updated_at' => now(),
                     ],
@@ -47,9 +46,6 @@ class FasilitasFactory extends Factory
                     'id_tanah'
                 );
             },
-            'file_360' => null,
-            'file_gambar' => null,
-            'file_pdf' => null,
             'catatan' => $this->faker->paragraph(),
         ];
     }
