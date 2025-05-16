@@ -39,6 +39,7 @@ Route::get('tanah/jenis/{jenisTanah}/public', [TanahController::class, 'publicBy
 Route::get('tanah/pimpinan/{namaPimpinan}/public', [TanahController::class, 'publicByPimpinan']);
 
 Route::get('/sertifikat/public', [sertifikatWakafController::class, 'publicIndex']);
+Route::get('sertifikat/public/tanah/{id_tanah}', [sertifikatWakafController::class, 'publicGetByTanah']);
 
 Route::get('pemetaan/public', [PemetaanTanahController::class, 'publicIndex']);
 Route::get('pemetaan/public/{id}', [PemetaanTanahController::class, 'publicShow']);
@@ -57,15 +58,11 @@ Route::get('inventaris/fasilitas/{id}/public', [InventarisController::class, 'pu
 Route::get('/datauser', [UserController::class, 'datauser']);
 Route::get('inventaris/fasilitas/{id}/public/detail', [InventarisController::class, 'publicsShowByFasilitas']);
 
-Route::post('/upload-minio', [MinioUploadController::class, 'upload']);
-Route::get('/certificate/{filename}', [MinioUploadController::class, 'getCertificate']); // Untuk download
-Route::get('/certificate/view/{filename}', [MinioUploadController::class, 'viewCertificate']); // Untuk lihat URL
-Route::delete('/certificate/delete/{filename}', [MinioUploadController::class, 'deleteCertificate']); // Untuk delete
-
 Route::get('/dokumen-legalitas/{id_dokumen_legalitas}/view', [sertifikatWakafController::class, 'viewDokumen']);
 Route::get('/dokumen-legalitas/{id_dokumen_legalitas}/download', [sertifikatWakafController::class, 'downloadDokumen']);
 
 Route::get('fasilitas/files/{id}/view', [FasilitasFileController::class, 'viewFile']);
+Route::get('fasilitas/files/{id}', [FasilitasFileController::class, 'show']);
 
 // Public route untuk akses GeoTIFF
 Route::get('/geotiff/{filename}', function ($filename) {

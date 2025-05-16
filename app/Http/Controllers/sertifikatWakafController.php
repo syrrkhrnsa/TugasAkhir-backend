@@ -738,4 +738,49 @@ class SertifikatWakafController extends Controller
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
+
+    public function publicGetByTanah($id_tanah)
+{
+    try {
+        $sertifikats = Sertifikat::where('id_tanah', $id_tanah)
+            ->where('status', 'disetujui')
+            ->with('dokumenLegalitas')
+            ->get();
+
+        if ($sertifikats->isEmpty()) {
+            return response()->json([
+                "status" => "success",
+                "message" => "Tidak ada data sertifikat untuk tanah ini",
+                "data" => []
+            ], Response::HTTP_OK);
+        }
+
+        $formattedData = $sertifikats->map(function ($sertifikat) {
+            return [
+                'id_sertifikat' => $sertifikat->id_sertifikat,
+                'no_dokumen' => $sertifikat->no_dokumen,
+                'jenis_sertifikat' => $sertifikat->jenis_sertifikat,
+                'status' => $sertifikat->status,
+                'tanggal_pengajuan' => $sertifikat->tanggal_pengajuan,
+                'dokumen' => $sertifikat->dokumenLegalitas->isNotEmpty() 
+                    ? $sertifikat->dokumenLegalitas->first()->dokumen_legalitas 
+                    : null,
+            ];
+        });
+
+        return response()->json([
+            "status" => "success",
+            "message" => "Data sertifikat berhasil diambil",
+            "data" => $formattedData
+        ], Response::HTTP_OK);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            "status" => "error",
+            "message" => "Terjadi kesalahan saat mengambil data sertifikat",
+            "error" => $e->getMessage()
+        ], Response::HTTP_INTERNAL_SERVER_ERROR);
+    }
+}
+
 }
