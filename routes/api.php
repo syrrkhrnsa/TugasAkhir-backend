@@ -57,11 +57,6 @@ Route::get('inventaris/fasilitas/{id}/public', [InventarisController::class, 'pu
 Route::get('/datauser', [UserController::class, 'datauser']);
 Route::get('inventaris/fasilitas/{id}/public/detail', [InventarisController::class, 'publicsShowByFasilitas']);
 
-Route::post('/upload-minio', [MinioUploadController::class, 'upload']);
-Route::get('/certificate/{filename}', [MinioUploadController::class, 'getCertificate']); // Untuk download
-Route::get('/certificate/view/{filename}', [MinioUploadController::class, 'viewCertificate']); // Untuk lihat URL
-Route::delete('/certificate/delete/{filename}', [MinioUploadController::class, 'deleteCertificate']); // Untuk delete
-
 Route::get('/dokumen-legalitas/{id_dokumen_legalitas}/view', [sertifikatWakafController::class, 'viewDokumen']);
 Route::get('/dokumen-legalitas/{id_dokumen_legalitas}/download', [sertifikatWakafController::class, 'downloadDokumen']);
 
@@ -148,15 +143,15 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::get('/log-tanah/{tanahId}', [ActivityLogController::class, 'logByTanahId']);
     Route::get('/log-sertifikat/{sertifikatId}', [ActivityLogController::class, 'logBySertifikatId']);
     Route::get('/log-sertifikat-by-tanah/{tanahId}', [ActivityLogController::class, 'logSertifikatByTanahId']);
-    Route::get('/logs/fasilitas', [ActivityLogController::class, 'logFasilitas']);
-    Route::get('/logs/inventaris', [ActivityLogController::class, 'logInventaris']);
-    Route::get('/logs/fasilitas/{fasilitasId}', [ActivityLogController::class, 'logByFasilitasId']);
-    Route::get('/logs/inventaris/{inventarisId}', [ActivityLogController::class, 'logByInventarisId']);
-    Route::get('/logs/pemetaan-fasilitas', [ActivityLogController::class, 'logPemetaanFasilitas']);
-    Route::get('/logs/pemetaan-tanah', [ActivityLogController::class, 'logPemetaanTanah']);
-    Route::get('/logs/pemetaan-fasilitas/{pemetaanFasilitasId}', [ActivityLogController::class, 'logByPemetaanFasilitasId']);
-    Route::get('/logs/pemetaan-tanah/{pemetaanTanahId}', [ActivityLogController::class, 'logByPemetaanTanahId']);
-    Route::get('/logs/pemetaan-fasilitas-by-tanah/{pemetaanTanahId}', [ActivityLogController::class, 'logPemetaanFasilitasByTanahId']);
+    Route::get('/log/fasilitas', [ActivityLogController::class, 'logFasilitas']);
+    Route::get('/log/inventaris', [ActivityLogController::class, 'logInventaris']);
+    Route::get('/log/fasilitas/{fasilitasId}', [ActivityLogController::class, 'logByFasilitasId']);
+    Route::get('/log/inventaris/{inventarisId}', [ActivityLogController::class, 'logByInventarisId']);
+    Route::get('/log/pemetaan-fasilitas', [ActivityLogController::class, 'logPemetaanFasilitas']);
+    Route::get('/log/pemetaan-tanah', [ActivityLogController::class, 'logPemetaanTanah']);
+    Route::get('/log/pemetaan-fasilitas/{pemetaanFasilitasId}', [ActivityLogController::class, 'logByPemetaanFasilitasId']);
+    Route::get('/log/pemetaan-tanah/{pemetaanTanahId}', [ActivityLogController::class, 'logByPemetaanTanahId']);
+    Route::get('/log/pemetaan-fasilitas-by-tanah/{pemetaanTanahId}', [ActivityLogController::class, 'logPemetaanFasilitasByTanahId']);
     
     Route::get('/dashboard/stats', [DashboardController::class, 'getDashboardStats']);
 
