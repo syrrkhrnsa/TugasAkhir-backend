@@ -39,6 +39,7 @@ Route::get('tanah/jenis/{jenisTanah}/public', [TanahController::class, 'publicBy
 Route::get('tanah/pimpinan/{namaPimpinan}/public', [TanahController::class, 'publicByPimpinan']);
 
 Route::get('/sertifikat/public', [sertifikatWakafController::class, 'publicIndex']);
+Route::get('sertifikat/public/tanah/{id_tanah}', [sertifikatWakafController::class, 'publicGetByTanah']);
 
 Route::get('pemetaan/public', [PemetaanTanahController::class, 'publicIndex']);
 Route::get('pemetaan/public/{id}', [PemetaanTanahController::class, 'publicShow']);
@@ -61,6 +62,7 @@ Route::get('/dokumen-legalitas/{id_dokumen_legalitas}/view', [sertifikatWakafCon
 Route::get('/dokumen-legalitas/{id_dokumen_legalitas}/download', [sertifikatWakafController::class, 'downloadDokumen']);
 
 Route::get('fasilitas/files/{id}/view', [FasilitasFileController::class, 'viewFile']);
+Route::get('fasilitas/files/{id}', [FasilitasFileController::class, 'show']);
 
 // Public route untuk akses GeoTIFF
 Route::get('/geotiff/{filename}', function ($filename) {
