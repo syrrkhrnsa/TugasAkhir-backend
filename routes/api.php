@@ -58,8 +58,9 @@ Route::get('inventaris/fasilitas/{id}/public', [InventarisController::class, 'pu
 Route::get('/datauser', [UserController::class, 'datauser']);
 Route::get('inventaris/fasilitas/{id}/public/detail', [InventarisController::class, 'publicsShowByFasilitas']);
 
-Route::get('/dokumen-legalitas/{id_dokumen_legalitas}/view', [sertifikatWakafController::class, 'viewDokumen']);
-Route::get('/dokumen-legalitas/{id_dokumen_legalitas}/download', [sertifikatWakafController::class, 'downloadDokumen']);
+Route::get('/public/sertifikat/{id_sertifikat}/dokumen-list', [sertifikatWakafController::class, 'getDokumenList']);
+Route::get('/public/dokumen-legalitas/{id_dokumen_legalitas}/view', [sertifikatWakafController::class, 'viewDokumen']);
+Route::get('/public/dokumen-legalitas/{id_dokumen_legalitas}/download', [sertifikatWakafController::class, 'downloadDokumen']);
 
 Route::get('fasilitas/files/{id}/view', [FasilitasFileController::class, 'viewFile']);
 Route::get('fasilitas/files/{id}', [FasilitasFileController::class, 'show']);
@@ -119,6 +120,8 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::get('/sertifikat/legalitas/{id}', [sertifikatWakafController::class, 'showLegalitas']);
     Route::get('/sertifikat/tanah/{id_tanah}', [sertifikatWakafController::class, 'getSertifikatByIdTanah']);
 
+    Route::get('/dokumen-legalitas/{dokumenPath}/view', [sertifikatWakafController::class, 'viewDokumen'])
+    ->where('dokumenPath', '.*');
     Route::get('/sertifikat/{id_sertifikat}/dokumen-list', [sertifikatWakafController::class, 'getDokumenList']);
 
     Route::post('/sertifikat/{id_sertifikat}/upload-dokumen', [sertifikatWakafController::class, 'uploadDokumen']);
